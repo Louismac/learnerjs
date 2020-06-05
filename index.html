@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src = "./libs/learner.v.0.2.js"></script>
+  <script src = "./libs/maxiInstruments.v.0.3.js"></script>
+  <button
+    style = "margin-top:20px;margin-bottom:20px;height:30px;"
+    onclick = "launchSynth()">Load Synths (User input required)
+  </button>
+  <div style = "width:400px;height:200px;background-color:blue;" id = "input"></div>
+  <div style = "width:400px;" id = "dataset"></div>
+  <div id = "synths"></div>
+</head>
+<body>
+  <script type="text/javascript">
+ 	  const learner = new Learner({docId:"test"})
+    learner.addGUI(document.getElementById("dataset"))
+    //learner.addClassifier(3)
+    // let y = [0]
+    const recordXY = (event)=> {
+      learner.newExample([event.clientX, event.clientY], instruments.getMappedOutputs());
+    }
+    document.getElementById("input").addEventListener("click", recordXY);
+    //Callback for result
+    // learner.onOutput = (output)=> {
+    //   //y = output
+    //   //instruments.updateMappedOutputs(output)
+    //   console.log(output)
+    // };
+
+    //OUPUT
+    const instruments = new MaxiInstruments();
+    const launchSynth = ()=> {
+      instruments.guiElement = document.getElementById("synths");
+      instruments.loadModules().then(()=> {
+        instruments.addSynth();
+        const inputSeq2 = {
+          notes:[{pitch:60, start:24, end:36},
+                 {pitch:67, start:72, end:95},
+                 {pitch:60, start:12, end:36},
+                 {pitch:67, start:45, end:76},
+                ],
+        };
+        instruments.synths[0].useFreqSliders(true)
+        instruments.synths[0].mapped = ["frequency"]
+        instruments.synths[0].setSequence(inputSeq2);
+        instruments.addSampler();
+        let origin = document.location.origin
+        if(origin.includes("file"))
+        {
+          origin = "http://127.0.0.1:4200"
+        }
+        instruments.samplers[0].loadSample(origin + "/sounds/909b.wav", 0);
+        instruments.samplers[0].loadSample(origin + "/sounds/909closed.wav", 6);
+        instruments.samplers[0].loadSample(origin + "/sounds/909.wav", 7);
+        let drumSeq = {
+          notes:[{pitch:0, start:0},
+                 {pitch:0, start:18},
+                 {pitch:0, start:42},
+                 {pitch:0, start:54},
+                 {pitch:7, start:24},
+                 {pitch:7, start:72},
+                ],
+        };
+        for(let i = 0; i < 16; i++) {
+          drumSeq.notes.push({pitch:6, start:i*6});
+        }
+        learner.addRegression(instruments.getNumMappedOutputs(), false);
+        learner.onOutput = (data)=> {
+          instruments.updateMappedOutputs(data);
+        };
+        instruments.setLoop(96)
+        instruments.setTempo(80)
+        instruments.samplers[0].setSequence(drumSeq);
+      });
+    }
+</script>
+</body>
+</html>
