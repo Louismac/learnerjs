@@ -1,5 +1,22 @@
+/**
+   Class for the main Learner library
+ */
 class Learner {
+ /**
+  * Creates the main Learner Object
+  * @param {Object} options - options for initialisation
+    @param {string} options.docId - Id used for storing data, defaults to
+    frameElement name
+    @param {function} options.onLoad - Called after all the libraries have set up
+  * @example
+  * new Learner({
+  *   docId:"myDoc"
+  *   onLoad:()=>{
+  *     console.log("I finished loading!")
+  *   }
+  * })
 
+  */
   constructor(options) {
     let docId;
     if(options !== undefined)
@@ -19,10 +36,16 @@ class Learner {
     this.modelOptions = {};
     this.classifier = true;
     this.recordingRound = 0;
+    /** Is currently recording
+        @var {boolean} */
     this.recording = false;
+    /** Is currently running
+        @var {boolean} */
     this.running = false;
     this.temp = [];
     this.streamBuffers = [];
+    /** The current output values (taken from GUI)
+        @var {Array} */
     this.y = [];
     this.numOutputs = 1;
     this.gui = false;
@@ -83,9 +106,36 @@ class Learner {
     link.type = 'text/css';
     link.href = origin + '/libs/learner.css';
     head.appendChild(link);
+    /** Called whenever new output values are returned
+        This is either when the GUI has been changed
+        or when new values have come from a model when running
+        Results are returned as Array of numbers.
+      * @example
+      * //Classification
+      * this.onOutput = (data)=> {
+      *   if(data[0] == 0) {
+      *     sound.trigger()
+      *   } else {
+      *     sound2.trigger()
+      *   }
+      * }
+      * @example
+      * //Regression (3 outputs)
+      * this.onOutput = (data)=> {
+      *   sound.pitch = data[0]
+      *   sound.volume = data[1]
+      *   sound.lfo = data[2]
+      * }
+        @var {function}
+     */
+    this.onOutput = ()=> {
 
+    }
   }
-
+  /**
+  Add the gui
+  @param {Element} [parent = document.body]  - the parent element to append to
+  */
   addGUI(p) {
     let parent = document.body;
     if(p)
@@ -212,7 +262,12 @@ class Learner {
     this.rapidLib = RapidLib();
     this.myModel = new this.rapidLib.Classification();
   }
-
+/**
+  Add a regression model
+  @param {number} outputs - the number of outputs for the regression model
+  @param {boolean} [gui = true]  - Add gui
+  @param {number} [numFrames = 0]  - How many frames to smooth the output over
+ */
   addRegression(
       n,
       gui = true,
@@ -237,6 +292,11 @@ class Learner {
       this.classifier = false;
       this.numOutputs = n;
       this.gui = gui;
+      for(let i = 0; i < n; i++)
+      {
+        this.y.push(0);
+        this.addStream(smoothOutput);
+      }
       if(gui)
       {
         let container = this.selectorContainer;
@@ -251,7 +311,6 @@ class Learner {
           slider.value = 0;
           slider.step = 0.01;
           this.outputGUI.push(slider);
-          this.y.push(0);
           slider.oninput = ()=>{
             this.y[i] = parseFloat(slider.value);
             this.onOutput(this.y);
@@ -259,12 +318,13 @@ class Learner {
           container.appendChild(slider);
         }
       }
-      for(let i = 0; i < n; i++)
-      {
-        this.addStream(smoothOutput);
-      }
   }
-
+  /**
+    Add a classification model
+    @param {number} outputs - the number of classes for the classification model
+    @param {boolean} [gui = true]  - Include a gui
+    @param {number} [numFrames = 0]  - How many frames to smooth the output over
+   */
   addClassifier(
       n,
       gui = true,
@@ -287,6 +347,7 @@ class Learner {
     this.classifier = true;
     this.numOutputs = 1;
     this.gui = gui;
+    this.y.push(0);
     if(gui)
     {
       let container = this.selectorContainer;;
@@ -296,7 +357,6 @@ class Learner {
       var label = document.createElement("p");
       label.innerHTML = "Class:"
       label.id = "class-label"
-      this.y.push(0);
       selectList.oninput = ()=> {
         this.y[0] = parseInt(selectList.selectedIndex);
         if(this.onOutput !== undefined)
@@ -314,8 +374,8 @@ class Learner {
           selectList.appendChild(option);
       }
       this.outputGUI.push(selectList);
-      this.addStream(smoothOutput)
     }
+    this.addStream(smoothOutput)
   }
 
   addStream(w)
@@ -365,10 +425,18 @@ class Learner {
     });
   }
 
+  /**
+  Set the delay for recording after the button has been pressed
+  @param {number} seconds - The number of seconds to delay
+  */
   setCountIn(val) {
     this.countIn = val;
   }
 
+  /**
+  Set the timer for how long to record for each time.
+  @param {number} seconds - The number of seconds to record for
+  */
   setRecordLimit(val) {
     this.recLimit = val;
   }
@@ -377,12 +445,35 @@ class Learner {
     return (ArrayBuffer.isView(x) &&
         Object.prototype.toString.call(x) !== "[object DataView]");
   }
-
+  /**
+  Provide a new input - output pair.
+  If recording, this is added to the dataset.
+  If running, the input is given to the model to predict a new output. The outputs is ignored.
+  If neither, this does nothing.
+  @param {Array} input - An array of numbers for the new input values
+  @param {Array} output - An array of numbers for the new output values
+  @example
+  learner.newExample([1,2,3,4],[5,6])
+  */
   newExample(input, y) {
     //Convert to Array if TypedArray
     if(this.isTypedArray(input))
     {
       input = Array.prototype.slice.call(input);
+    }
+    for(let i = 0; i < input.length; i++)
+    {
+      if(!input[i])
+      {
+        input[i] = 0;
+      }
+    }
+    for(let i = 0; i < y.length; i++)
+    {
+      if(!y[i])
+      {
+        y[i] = 0;
+      }
     }
     if(this.recording)
     {
@@ -416,7 +507,14 @@ class Learner {
 	    this.onOutput(this.y)
     }
   }
-
+  /**
+  Pass options to the classifier or regression model
+  @param {Object} options
+  @param {number} options.k - K value for KNN if using classification
+  @param {number} options.numEpochs - number of epochs to trian regression model for
+  @param {number} options.numHiddenNodes - number of hidden nodes in each hidden layer of regression model
+  @param {number} options.numHiddenLayers - number of hidden layers in regression model
+   */
   setModelOptions(options) {
     this.modelOptions = options;
     if(this.USE_WORKER)
@@ -461,6 +559,9 @@ class Learner {
     }
   }
 
+  /**
+  Train the current model
+   */
   train() {
     if(!this.running && ! this.recording)
     {
@@ -484,7 +585,9 @@ class Learner {
     this.disableButtons(false);
     this.run()
   }
-
+  /**
+  Run the current model
+   */
   run() {
     this.recording = false;
     this.running = !this.running;
@@ -577,7 +680,9 @@ class Learner {
       doRun();
     }
   }
-
+  /**
+  Delete all training data
+   */
   clear() {
     return new Promise((resolve, reject)=> {
       this.store.setItem(this.DATASET_KEY,[]).then(()=> {
@@ -587,14 +692,18 @@ class Learner {
     })
 
   }
-
+  /**
+  Randomise all output parameters
+   */
   randomise() {
     for(let i = 0; i < this.numOutputs; i++)
     {
 	  this.updateOutput(i, Math.random());
     }
   }
-
+  /**
+  Print dataset to console
+   */
   print() {
     this.store.getItem(this.DATASET_KEY).then((dataset)=> {
       dataset.forEach((line)=> {
@@ -602,7 +711,9 @@ class Learner {
       });
     });
   }
-
+  /**
+  Delete last round of data (start - stop record cycle)
+   */
   deleteLastRound() {
     this.store.getItem(this.DATASET_KEY).then((dataset)=> {
         let trainingData = [];
@@ -667,6 +778,10 @@ class Learner {
     });
   };
 
+  /**
+  Get training data
+  @returns {Promise} Promise represents the training data
+   */
   trainingData() {
     return new Promise((resolve, reject)=> {
       this.save().then(()=> {
@@ -682,7 +797,11 @@ class Learner {
     });
   }
 
-
+  /**
+  Load training data from url
+  @returns {Promise}
+  @param {string} url - URL for json file containing dataset
+   */
   loadTrainingData(url) {
     return new Promise((resolve, reject)=> {
       this.clear().then(()=>{
@@ -701,7 +820,10 @@ class Learner {
       })
     })
   }
-
+  /**
+  Download training data to local machine as json
+  @returns {Promise}
+   */
   downloadTrainingData() {
     return new Promise((resolve, reject)=> {
       learner.trainingData().then((res)=>{
