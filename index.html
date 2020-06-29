@@ -27,6 +27,9 @@
       instruments.updateMappedOutputs(output)
       console.log(output)
     };
+    learner.setModelOptions({
+      numHiddenNodes:8
+    });
 
     //OUPUT
     const instruments = new MaxiInstruments();
