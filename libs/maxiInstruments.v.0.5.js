@@ -213,19 +213,17 @@ class MaxiInstruments {
 
   constructor() {
     this.samplers = [];
-    this.globalParameters = new Float32Array(256);
+    this.globalParameters = new Float32Array(512);
     this.loops = new Float32Array(16);
     this.synths = [];
     this.sendTick = false;
     this.synthProcessorName = 'maxi-synth-processor';
-    this.version = "v.0.4";
+    this.version = "v.0.5";
     this.TICKS_PER_BEAT = 24;
     this.NUM_SYNTHS = 6;
     this.NUM_SAMPLERS = 6;
     this.NUM_SYNTH_PARAMS = Object.keys(MaxiSynth.parameters()).length;
     this.NUM_SAMPLER_PARAMS = Object.keys(MaxiSampler.parameters()).length;
-    // this.NUM_SYNTH_PARAMS = 17;
-    // this.NUM_SAMPLER_PARAMS = 24;
     this.GLOBAL_OFFSET =
       (this.NUM_SYNTHS *this.NUM_SYNTH_PARAMS) +
       (this.NUM_SAMPLERS * this.NUM_SAMPLER_PARAMS);
@@ -280,6 +278,7 @@ class MaxiInstruments {
           this.globalParameters[index] = val;
           if(this.paramWriter !== undefined && send)
           {
+            //console.log("enqueuing", this.globalParameters)
             this.enqueue();
           }
         }
@@ -379,7 +378,7 @@ class MaxiInstruments {
       );
       window.node = this.node;
 
-      let sab3 = RingBuffer.getStorageForCapacity(256, Float32Array);
+      let sab3 = RingBuffer.getStorageForCapacity(512, Float32Array);
       let rb3 = new RingBuffer(sab3, Float32Array);
       this.paramWriter = new ArrayWriter(rb3);
       this.node.port.postMessage({
@@ -772,6 +771,7 @@ class MaxiInstrument {
       offset += this.instrument == "synth" ? (this.index * this.NUM_SYNTH_PARAMS) :  (this.index * this.NUM_SAMPLER_PARAMS)
       const paramIndex = Object.keys(this.parameters).indexOf(name);
       const index = offset + paramIndex;
+      //console.log(name, val, send, index, this.index, offset, this.index * this.NUM_SAMPLER_PARAMS)
       this.onParamUpdate(index, val, send)
     }
   }
@@ -1212,9 +1212,9 @@ class MaxiSampler extends MaxiInstrument {
      const core = {
        "gain":{scale:1, translate:0, min:0, max:1, val:0.5},
        "rate":{scale:1, translate:0, min:0, max:4, val:1},
-       "pan":{scale:1, translate:0, min:0, max:1, val:0.5}
-       // "end":{scale:1, translate:0, min:0, max:1, val:1},
-       // "start":{scale:1, translate:0, min:0, max:1, val:0}
+       "pan":{scale:1, translate:0, min:0, max:1, val:0.5},
+       "end":{scale:1, translate:0, min:0, max:1, val:1},
+       "start":{scale:1, translate:0, min:0, max:1, val:0.0}
      };
      let voices = 8;
      let parameters = {};
