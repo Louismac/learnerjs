@@ -365,8 +365,9 @@ class MaxiInstruments {
    * instruments.setLoop(4, 1)
   */
   setLoop(val, ticks = 24) {
-    console.log("loop", (val - 1) * (this.TICKS_PER_BEAT / ticks))
-    this.node.port.postMessage({loopAll: (val - 1) * (this.TICKS_PER_BEAT / ticks)});
+    const loopAt = (val * (this.TICKS_PER_BEAT / ticks));
+    console.log("loop", loopAt);
+    this.node.port.postMessage({loopAll: loopAt});
   }
 
   /**
@@ -737,11 +738,12 @@ class MaxiInstrument {
     * sampler.setLoop(4, 1)
    */
     setLoop(val, ticks = 24) {
+      const loopAt = (val * (this.TICKS_PER_BEAT / ticks));
       this.node.port.postMessage({
         loop:{
           instrument:this.instrument,
           index:this.index,
-          val:(val - 1) * (this.TICKS_PER_BEAT / ticks)
+          val:loopAt
         }
       });
     }
@@ -1656,7 +1658,7 @@ class MaxiSampler extends MaxiInstrument {
 
   toggleGroup() {
     this.group = this.group == 0 ? 1 : 0;
-    const changeGroupButton = document.getElementById("changeGroupButton");
+    const changeGroupButton = document.getElementById("changeGroupButton_" + this.index);
     const slots = this.group == 0 ? "5-8" : "1-4";
     changeGroupButton.innerHTML = "View Samples " + slots;
     const indexes = [0, 1, 2, 3].map(x => x + ((this.voices / 2) * this.group))
@@ -1687,7 +1689,7 @@ class MaxiSampler extends MaxiInstrument {
     const changeGroupButton = document.createElement("BUTTON");
     changeGroupButton.innerHTML = "View Samples 5-8";
     changeGroupButton.classList.add("maxi-btn")
-    changeGroupButton.id = "changeGroupButton";
+    changeGroupButton.id = "changeGroupButton_" + this.index;
     changeGroupButton.onclick = ()=>{
       this.toggleGroup();
     }
