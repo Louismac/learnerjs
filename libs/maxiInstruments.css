@@ -1,6 +1,12 @@
 .maxi-selector {
   background-color:transparent;
   border:#4D43EB solid;
+  margin: 5px;
+}
+
+.selector-label {
+  font-size: 12px;
+  display: inline;
 }
 
 .title-label {
@@ -22,8 +28,9 @@
   border:none;
   border-radius:3px;
   height:25px;
-  margin:10px;
+  margin:auto;
   color:white;
+  display: block;
 }
 
 .maxi-table {

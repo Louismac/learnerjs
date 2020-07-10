@@ -208,13 +208,19 @@ class ArrayReader {
 }
 
 
-
+/**
+   Class for the main MaxiInstruments library
+ */
 class MaxiInstruments {
 
   constructor() {
+    /** Holds the sampler objects, in order of added
+        @var {MaxiSampler[]} */
     this.samplers = [];
     this.globalParameters = new Float32Array(512);
     this.loops = new Float32Array(16);
+    /** Holds the synth objects, in order of added
+        @var {MaxiSynth[]} */
     this.synths = [];
     this.sendTick = false;
     this.synthProcessorName = 'maxi-synth-processor';
@@ -261,10 +267,21 @@ class MaxiInstruments {
     return this.samplers.concat(this.synths);
   }
 
+  /**
+  Return how many mapped parameters there are across all instruments
+  @returns {number} total number mapped parameters there are across all instruments
+  @example
+  * //Make a regression model that has the correct number of outputs
+  * learner.addRegression(instruments.getNumMappedOutputs(), false)
+  */
   getNumMappedOutputs() {
     return this.getInstruments().reduce((c, s) => c + s.mapped.length, 0);
   }
 
+  /**
+  Create a MaxiSampler instance
+  @returns {Object} the MaxiSampler object
+   */
   addSampler() {
     let sampler;
     if (this.audioContext !== undefined) {
@@ -278,7 +295,6 @@ class MaxiInstruments {
           this.globalParameters[index] = val;
           if(this.paramWriter !== undefined && send)
           {
-            //console.log("enqueuing", this.globalParameters)
             this.enqueue();
           }
         }
@@ -292,6 +308,10 @@ class MaxiInstruments {
     return sampler;
   }
 
+  /**
+  Create a MaxiSynth instance
+  @returns {Object} the MaxiSynth object
+   */
   addSynth() {
     let synth;
     if(this.audioContext !== undefined) {
@@ -305,6 +325,7 @@ class MaxiInstruments {
           this.globalParameters[index] = val;
           if(this.paramWriter !== undefined && send)
           {
+            //console.log("enqueuing", this.globalParameters)
             this.enqueue();
           }
         }
@@ -319,8 +340,8 @@ class MaxiInstruments {
   }
 
   enqueue() {
-      let success = this.paramWriter.enqueue(this.globalParameters);
-      this.retryEnqueue(success, 0)
+    let success = this.paramWriter.enqueue(this.globalParameters);
+    this.retryEnqueue(success, 0)
   }
 
   retryEnqueue(success, ctr) {
@@ -332,27 +353,36 @@ class MaxiInstruments {
       }, 30)
     }
   }
-
-  setParam(name, val) {
-    let param = this.node.parameters.get(name);
-    if(param)
-    {
-      param.setValueAtTime(val, this.audioContext.currentTime)
-    }
+ /**
+   Set the Loop of all instruments
+   @param {number} loopLength The length of the loop
+   @param {number} [ticks=24] ticksPerBeat for the loop
+   @example
+   * //Set loop for 4 beats at default 24 ticks
+   * instruments.setLoop(96)
+   * @example
+   * //Set loop for 4 beats
+   * instruments.setLoop(4, 1)
+  */
+  setLoop(val, ticks = 24) {
+    console.log("loop", (val - 1) * (this.TICKS_PER_BEAT / ticks))
+    this.node.port.postMessage({loopAll: (val - 1) * (this.TICKS_PER_BEAT / ticks)});
   }
 
-  setLoop(val) {
-    this.node.port.postMessage({loopAll: val - 1});
-  }
-
-  setLoopBeats(val) {
-    this.node.port.postMessage({loopAll: (val * this.TICKS_PER_BEAT) - 1});
-  }
-
+  /**
+  Set Tempo
+  @param {number} tempo in BPM
+   */
   setTempo(tempo) {
     this.node.port.postMessage({tempo:tempo});
   }
 
+  /**
+  Get the current values of the mapped instrument parameters
+  @return {number[]} current values of the mapped instrument parameters
+  @examples
+  * learner.newExample(instruments.getMappedOutputs(), learner.y)
+   */
   getMappedOutputs() {
 	  let y = [];
     this.getInstruments().forEach((s)=> {
@@ -366,7 +396,8 @@ class MaxiInstruments {
       this.audioContext.destination.channelInterpretation='discrete';
       this.audioContext.destination.channelCountMode='explicit';
       this.audioContext.destination.channelCount=this.audioContext.destination.maxChannelCount
-
+      /** Holds the main AudioWorkletNode
+          @var {Object} */
      this.node = new AudioWorkletNode(
         this.audioContext,
         this.synthProcessorName,
@@ -448,10 +479,20 @@ class MaxiInstruments {
     });
   }
 
+/**
+Load the modules. Must be done before any synths or samplers are added
+@return {Promise}
+@example
+*instruments.loadModules().then(()=> {
+*  //Music making code goes here
+*})
+ */
   loadModules() {
     return new Promise((resolve, reject)=> {
       if (this.audioContext === undefined) {
         try {
+           /** Holds the main AudioContext
+                @var {Object} */
           this.audioContext = new AudioContext({
             latencyHint:'playback',
             sample: 44100
@@ -459,9 +500,16 @@ class MaxiInstruments {
          this.loadModule(this.getSynthName()).then(()=> {
             this.createNode().then(resolve);
           }).catch((err)=> {
+            if(this.guiElement !== undefined)
+            {
+              const label = document.createElement("p");
+              label.innerHTML = "Audio worklets not supported, try Chrome!";
+              this.guiElement.appendChild(label)
+            }
             reject(err);
           });
         } catch (err) {
+          console.log("here")
           reject(err);
         }
       }
@@ -471,7 +519,14 @@ class MaxiInstruments {
       }
     });
   }
-
+ /**
+ Updates the mapped parameters of the instruments with new values (usually from a regression model)
+ @param {number[]} data The new values to the mapped parameters
+  *@example
+  *learner.onOutput = (output)=> {
+  *  instruments.updateMappedOutputs(output)
+  *}
+  */
   updateMappedOutputs(data)
   {
     let outputCtr = 0;
@@ -503,14 +558,41 @@ class MaxiInstruments {
     }
   }
 
+  /**
+  Toggle Play / pause
+   */
   playPause() {
     this.node.port.postMessage({togglePlaying:true});
   }
-
+  /**
+  Reset all sequencers to 0.
+   */
   rewind() {
     this.node.port.postMessage({rewind:true});
   }
 
+/**
+ * This callback type is called `onTickCallback` and is displayed as a global symbol.
+ *
+ * @callback onTickCallback
+ * @param {number[]} playHeads
+ */
+
+  /**
+    Set a callback function to be called on every tick
+    * @param {onTickCallback} callback
+    * @example
+    *instruments.setOnTick((playHeads)=> {
+    *  //The current playhead of the first instrument added
+    *  if(playHeads[0] == 1) {
+    *    sound.trigger()
+    *  }
+    *  //The current playhead of the third instrument added
+    *  if(playHeads[2] % 2 == 0) {
+    *    sound2.trigger()
+    *  }
+    *})
+   */
   setOnTick(onTick) {
     this.onTick = onTick;
     if(!this.sendTick) {
@@ -520,15 +602,112 @@ class MaxiInstruments {
   }
 }
 
+class MX {
+
+  //https://github.com/coolaj86/knuth-shuffle
+  static shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+    while (0 !== currentIndex) {
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex -= 1;
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+    return array;
+  }
+
+  static unabbreviate(n) {
+    if(n.p !== undefined) {
+      n.pitch = n.p;
+      n.p = undefined;
+    }
+    if(n.s !== undefined) {
+      n.start = n.s;
+      n.s = undefined;
+    }
+    if(n.e !== undefined) {
+      n.end = n.e;
+      n.e = undefined;
+    }
+    if(n.l !== undefined) {
+      n.length = n.l;
+      n.l = undefined;
+    }
+    if(n.v !== undefined) {
+      n.velocity = n.v;
+      n.v = undefined;
+    }
+    if(n.f !== undefined) {
+      n.freq = n.f;
+      n.f = undefined;
+    }
+  }
+
+  static shufflePos(seq) {
+    let indexes = new Array(seq.length).fill(1).map((x,i)=>i);
+    MX.shuffle(indexes);
+    let newSeq = [];
+    seq.forEach((oldN, i)=> {
+      MX.unabbreviate(oldN);
+      let newN = JSON.parse(JSON.stringify(oldN));
+      let switchN = seq[indexes[i]];
+      MX.unabbreviate(switchN);
+      newN.start = undefined;
+      if(switchN.start !== undefined) {
+        newN.start = switchN.start;
+        newN.end = switchN.end;
+        newN.length = switchN.length;
+      }
+      newSeq.push(JSON.parse(JSON.stringify(newN)));
+    })
+    return newSeq;
+  }
+
+  static shuffleNotes(seq) {
+    let indexes = new Array(seq.length).fill(1).map((x,i)=>i);
+    MX.shuffle(indexes);
+    let newSeq = [];
+    seq.forEach((oldN, i)=> {
+      MX.unabbreviate(oldN);
+      let newN = JSON.parse(JSON.stringify(oldN));
+      let switchN = seq[indexes[i]];
+      MX.unabbreviate(switchN);
+      newN.pitch = newN.freq = undefined;
+      if(switchN.pitch !== undefined) {
+        newN.pitch = switchN.pitch;
+      }
+      else if(switchN.freq !== undefined) {
+        newN.freq = switchN.freq;
+      }
+      newSeq.push(JSON.parse(JSON.stringify(newN)));
+    })
+    return newSeq;
+  }
+}
+
+/**
+ Class representing a MaxiInstrument, the parent of both MaxiSynth and MaxiSampler
+ */
 class MaxiInstrument {
 
   constructor(node, index, instrument, audioContext, onParamUpdate) {
     this.node = node;
     this.index = index;
     this.instrument = instrument;
+    /** Holds the audio context
+        @var {Object} */
     this.audioContext = audioContext;
     this.onParamUpdate = onParamUpdate;
+    /** Which instrument parameters to map
+        @var {string[]}
+        @example
+        synth.mapped = ["frequency", "attack"]
+        @example
+        sampler.mapped = ["gain_0", "rate_1"]
+     */
     this.mapped = [];
+    this.prevGains = {};
     this.outputGUI = [];
     this.TICKS_PER_BEAT = 24;
     this.NUM_SYNTHS = 6;
@@ -546,27 +725,105 @@ class MaxiInstrument {
       this.docId = window.frameElement.name
     }
   }
-
-  setLoop(val) {
-    this.node.port.postMessage({
-      loop:{
-        instrument:this.instrument,
-        index:this.index,
-        val:val
+  /**
+    Set the Loop of this instrument
+    @param {number} loopLength The length of the loop
+    @param {number} [ticks=24] ticksPerBeat for the loop
+    @example
+    * //Set loop for 4 beats at default 24 ticks
+    * synth.setLoop(96)
+    * @example
+    * //Set loop for 4 beats
+    * sampler.setLoop(4, 1)
+   */
+    setLoop(val, ticks = 24) {
+      this.node.port.postMessage({
+        loop:{
+          instrument:this.instrument,
+          index:this.index,
+          val:(val - 1) * (this.TICKS_PER_BEAT / ticks)
+        }
+      });
+    }
+/**
+Return any muted samples / synths back to original gain
+@param {number[]} [tracks=all tracks] If synth this argument is largely pointless.
+ * If a sampler you can specify to unmute particular samples
+ @example
+ synth.unmute()
+ @example
+ * //Unmute all samples
+ * sampler.unmute()
+ @example
+ * //Unmute first and fourth samples
+ * sampler.unmute([0, 3])
+ */
+  unmute(tracks) {
+    if(this.prevGains === undefined) {
+      return;
+    }
+    if(this.instrument === "sampler")
+    {
+      if(tracks === undefined)
+      {
+        tracks = new Array(8).fill(1).map((x,i)=>i)
       }
-    });
+      let params = [];
+      tracks.forEach((t)=> {
+        if(this.prevGains["gain_"+t] !== undefined) {
+          params.push(["gain_"+t, this.prevGains["gain_"+t]])
+        }
+      });
+      this.setParams(params)
+      this.prevGains = {};
+    }
+    else
+    {
+      this.setParam("gain", this.prevGains);
+      this.prevGains = 0;
+    }
+  }
+  /**
+  Mute given synth or samples
+  @param {number[]} [tracks=all tracks] If synth this argument is largely pointless.
+   * If a sampler you can specify to mute particular samples
+   @example
+   synth.mute()
+   @example
+   * //Mute all samples
+   * sampler.mute()
+   @example
+   * //Mute first and fourth samples
+   * sampler.mute([0, 3])
+   */
+  mute(tracks) {
+    if(this.instrument === "sampler")
+    {
+      if(tracks === undefined)
+      {
+        tracks = new Array(8).fill(1).map((x,i)=>i)
+      }
+      var params = tracks.map(x => [ "gain_" + x, 0]);
+      params.forEach((row)=> {
+        if(this.prevGains[row[0]] === undefined)
+        {
+          this.prevGains[row[0]] = this.parameters[row[0]].val;
+        }
+      })
+      this.setParams(params)
+    }
+    else
+    {
+      this.prevGains = this.parameters.gain.val;
+      this.setParam("gain", 0);
+    }
   }
 
-  setLoopBeats(val) {
-    this.node.port.postMessage({
-      loop:{
-        instrument:this.instrument,
-        index:this.index,
-        val:(val * this.TICKS_PER_BEAT) - 1
-      }
-    });
-  }
-
+/**
+Trigger note on
+@param {number} [freq = 60] Pitch of MIDI note
+@param {number} [vel = 127] Velocity (0-127)
+ */
   noteon(freq = 60, vel = 127) {
     //console.log("instrument note on", this.instrument, this.index, freq, vel)
     this.node.port.postMessage({
@@ -577,7 +834,10 @@ class MaxiInstrument {
       }
     });
   }
-
+  /**
+  Trigger note ff
+  @param {number} [freq = 60] Pitch of MIDI note
+   */
   noteoff(freq = 60) {
     this.node.port.postMessage({
       noteoff:{
@@ -588,9 +848,72 @@ class MaxiInstrument {
     });
   }
 
-  setSequence(seq, instruments = [], muteDrums = false) {
+/**
+Set Sequence
+ * @param {Object[]} sequence - The sequence to be assigned.
+ * @param {(number|number[])} sequence[].s - the start position in ticks of an event. If array, multiple events at same pitch and length played
+ * @param {(number|number[])} sequence[].start - the start position in ticks of an event. If array, multiple events at same pitch and length played
+ * @param {number} sequence[].l - The length in ticks of an event. Does not apply to sampler.
+ * @param {number} sequence[].length - The length in ticks of an event. Does not apply to sampler.
+ * @param {number} sequence[].e - The end in ticks of an event. Does not apply to sampler.
+ * @param {number} sequence[].end - The end in ticks of an event. Does not apply to sampler.
+ * @param {(number|number[])} sequence[].p - the MIDI note of an event, if array chord played. If sampler, denotes sample to trigger.
+ * @param {(number|number[])} sequence[].pitch - the MIDI note of an event, if array chord played. If sampler, denotes sample to trigger.
+ * @param {(number|number[])} sequence[].f - the frequency in Hz of an event, if array chord played
+ * @param {(number|number[])} sequence[].frequency - the the frequency in Hz of an event, if array chord played
+ * @param {number} sequence[].v - The velocity of an event (0 - 127). Default 127
+ * @param {number} sequence[].velocity - The velocity of an event (0 - 127). Default 127
+ * @param {number} [ticksPerBeat = 24] The ticks per beat of this sequence (max 24)
+ * @param {number} [transpose = 0] Transpose all note values by this
+ * @example
+ * //Synth MIDI notes on beats 1 and 3 (24 ticks per beat default)
+ * synth.setSequence([
+ *   {p:60, s:0, v:60, l:24},{p:60, s:48, v:60, l:24}
+ * ])
+ * @example
+ * //Synth MIDI notes on beats 1 and 3 (4 ticks per beat)
+ * synth.setSequence([
+ *   {p:60, s:0, v:60, l:4},{p:60, s:8, v:60, l:4}
+ * ], 4)
+ * @example
+ * //Synth frequencies, end provided
+ * synth.setSequence([
+ *   {f:440, s:0, e:12},{f:220, s:24, e:36}
+ * ])
+ * @example
+ * //Synth notes in 16ths transposed octave down
+ * synth.setSequence([
+ *   {p:60, s:0, l:2},{p:63, s:12, l:4}
+ * ], 4, -12)
+ * @example
+ * sampler.setSequence([
+ *   {p:0, s:0, v:60}, {p:1, s:24},
+ * ])
+ * @example
+ * //Play samples 0,1,2 at the start of the seqeunce
+ * sampler.setSequence([
+ *   {p:[0, 1, 2], s:0, v:60}
+ * ])
+ * @example
+ * //Play sample 0 at 0, 24, 36 and 48 ticks
+ * sampler.setSequence([
+ *   {p:0, s:[0,24,36,48]}
+ * ])
+ * @example
+ * //Play sample 0 on 1 and 3 (1 tick per beat)
+ * sampler.setSequence([
+ *   {p:0, s:[0,2]}
+ * ], 1)
+ * @example
+ * //Play samples on 16ths (4 ticks per beat), alternating velocities
+ * sampler.setSequence([
+ *   {p:0, s:[0,2,4,6], v:127},
+ *   {p:0, s:[1,2,5,7], v:60},
+ * ], 4)
+*/
+  setSequence(seq, tickPerBeat = 24, transpose = 0, instruments = [], muteDrums = false) {
    	let toAdd = [];
-    let mul = 1;
+    let mul = this.TICKS_PER_BEAT / tickPerBeat;
     let notes = seq;
     //backwards compat/magenta
     if(seq.notes !== undefined) {
@@ -603,24 +926,8 @@ class MaxiInstrument {
     let newNotes = [];
     for(let i = 0; i < notes.length; i++) {
       const n = notes[i];
-      if(n.p !== undefined) {
-        n.pitch = n.p;
-      }
-      if(n.s !== undefined) {
-        n.start = n.s;
-      }
-      if(n.e !== undefined) {
-        n.end = n.e;
-      }
-      if(n.l !== undefined) {
-        n.length = n.l;
-      }
-      if(n.v !== undefined) {
-        n.velocity = n.v;
-      }
-      if(n.f !== undefined) {
-        n.freq = n.f;
-      }
+      MX.unabbreviate(n);
+      //fold out notes
       if(Array.isArray(n.pitch)) {
         n.pitch.forEach((p)=> {
           let newNote = JSON.parse(JSON.stringify(n));
@@ -634,6 +941,21 @@ class MaxiInstrument {
         n.freq.forEach((f)=> {
           let newNote = JSON.parse(JSON.stringify(n));
           newNote.freq = f;
+          newNotes.push(newNote)
+        });
+        notes.splice(i, 1);
+        --i;
+      }
+    }
+    notes = notes.concat(newNotes)
+    newNotes = [];
+    //Fold out starts
+    for(let i = 0; i < notes.length; i++) {
+      const n = notes[i];
+      if(Array.isArray(n.start)) {
+        n.start.forEach((s)=> {
+          let newNote = JSON.parse(JSON.stringify(n));
+          newNote.start = s;
           newNotes.push(newNote)
         });
         notes.splice(i, 1);
@@ -684,7 +1006,7 @@ class MaxiInstrument {
         var f = n.freq;
         if(f === undefined && n.pitch !== undefined)
         {
-          f = this.getFreq(n.pitch)
+          f = this.getFreq(n.pitch + transpose)
         }
       	toAdd.push({cmd:"noteon", f:f, t:start * mul, v:v});
       	toAdd.push({cmd:"noteoff", f:f, t:end * mul});
@@ -693,6 +1015,7 @@ class MaxiInstrument {
     toAdd.sort((a, b)=> {
       return a.t - b.t;
     });
+    //console.log(toAdd)
     this.node.port.postMessage({
       sequence:{
         instrument:this.instrument,
@@ -705,7 +1028,6 @@ class MaxiInstrument {
   onGUIChange(val, index) {
     const key = Object.keys(this.parameters)[index];
     this.onChange(val, key);
-
   }
 
   onMLChange(val, index) {
@@ -721,7 +1043,9 @@ class MaxiInstrument {
       this.saveParamValues();
     }
   }
-
+/**
+Randomise all mapped parameters
+ */
   randomise() {
     this.mapped.forEach((key)=> {
       const val = Math.random();
@@ -729,7 +1053,10 @@ class MaxiInstrument {
       this.onChange(val, key);
     })
   }
-
+  /**
+  Get values of mapped parameters
+  @return {string[]} params -
+   */
   getMappedParameters() {
     let vals = [];
     this.mapped.forEach((key)=> {
@@ -739,8 +1066,8 @@ class MaxiInstrument {
   }
 
   sendDefaultParam() {
-    console.log("sendDefaultParam")
     setTimeout(()=>{
+      console.log("sendDefaultParam")
       const keys = Object.keys(this.parameters);
       keys.forEach((p, i)=> {
         const send = i == keys.length - 1
@@ -750,12 +1077,33 @@ class MaxiInstrument {
 
   }
 
+/**
+  Set parameter values for instrument
+  @param {Array[]} pairs - Array of arrays containing [key, val] pairs
+  *@example
+  *synth.setParams([
+  *  ["gain", 0],
+  *  ["attack", 1000],
+  *  ["release", 40]
+  *])
+ */
   setParams(vals) {
     vals.forEach((pair, i)=>{
       this.setParam(pair[0], pair[1], i == vals.length - 1);
     })
   }
 
+  /**
+    Set parameter value for instrument
+    @param {string} key - name of parameter
+    @param {number} val - value of parameter
+    @param {boolean} [send=true] - Whether to send to audio worker or not (good for bulking changes)
+    @example
+    * //Wait until end to send
+    * sampler.setParam("gain_0", 0.5, false);
+    * sampler.setParam("gain_2", 0.5, false)
+    * sampler.setParam("gain_3", 0.5)
+   */
   setParam(name, val, send = true) {
     if(val < 0) val = 0.00;
     const scaled = (val - this.parameters[name].translate) / this.parameters[name].scale;
@@ -790,19 +1138,28 @@ class MaxiInstrument {
 
   loadParamValues() {
     const key = this.getParamKey();
-    const vals = JSON.parse(window.localStorage.getItem(key))
-    if(vals)
+    const savedVals = JSON.parse(window.localStorage.getItem(key))
+    if(savedVals)
     {
-      const keys = Object.keys(vals);
+      //console.log(savedVals)
+      const keys = Object.keys(this.parameters);
       keys.forEach((key, i)=>{
-        const val = parseFloat(vals[key]);
-        if(this.outputGUI[key])
+        let val = parseFloat(savedVals[key]);
+        if(this.outputGUI[key] && val)
         {
-          const send = i >= keys.length - 1;
           this.outputGUI[key].value = val;
-          this.onChange(val, key, send);
         }
+        else
+        {
+          val = this.parameters[key].val;
+        }
+        const send = i >= keys.length - 1;
+        this.onChange(val, key, send);
       });
+    }
+    else
+    {
+      this.sendDefaultParam();
     }
   }
 
@@ -815,28 +1172,37 @@ class MaxiInstrument {
   }
 }
 
+/**
+Class repesenting synth object. Subclass of MaxiInstrument
+@extends MaxiInstrument
+*/
+
 class MaxiSynth extends MaxiInstrument {
 
   static parameters() {
     return {
-          "gain":{scale:1, translate:0, val:1},
-          "pan":{scale:1, translate:0, val:0.5},
-          "attack":{scale:1500, translate:0, val:1000},
-          "decay":{scale:1500, translate:0, val:1000},
-          "sustain":{scale:1, translate:0, val:1},
-          "release":{scale:1500, translate:0, val:1000},
-          "lfoFrequency":{scale:10, translate:0, val:0},
-          "lfoPitchMod":{scale:100, translate:0, val:1},
-          "lfoFilterMod":{scale:8000, translate:0, val:1},
-          "lfoAmpMod":{scale:1, translate:0, val:0},
-          "adsrPitchMod":{scale:100, translate:0, val:1},
-          "cutoff":{scale:3000, translate:40, val:2000},
-          "Q":{scale:2, translate:0, val:1},
-          "frequency":{scale:1000, translate:0, val:440},
-          "frequency2":{scale:1000, translate:0, val:440},
-          "poly":{scale:1, translate:0, val:1},
-          "oscFn":{scale:1, translate:0, val:0},
-        }
+      "gain":{scale:1, translate:0, val:1},
+      "pan":{scale:1, translate:0, val:0.5},
+      "attack":{scale:1500, translate:0, val:1000},
+      "decay":{scale:1500, translate:0, val:1000},
+      "sustain":{scale:1, translate:0, val:1},
+      "release":{scale:1500, translate:0, val:1000},
+      "lfoFrequency":{scale:10, translate:0, val:0},
+      "lfoPitchMod":{scale:100, translate:0, val:0},
+      "lfoFilterMod":{scale:8000, translate:0, val:0},
+      "lfoAmpMod":{scale:1, translate:0, val:0},
+      "adsrPitchMod":{scale:100, translate:0, val:0},
+      "cutoff":{scale:3000, translate:40, val:3000},
+      "reverbMix":{scale:1, translate:0, val:0},
+      "roomSize":{scale:1.5, translate:0, val:0},
+      "delay":{scale:44100, translate:0, val:0},
+      "delayMix":{scale:1.0, translate:0, val:0},
+      "frequency":{scale:1000, translate:0, val:440},
+      "frequency2":{scale:1000, translate:0, val:440},
+      "poly":{scale:1, translate:0, val:1},
+      "oscFn":{scale:1, translate:0, val:0},
+      "lfoOscFn":{scale:1, translate:0, val:0},
+    }
   }
 
   constructor(node, index, instrument, audioContext, onParamUpdate) {
@@ -1045,7 +1411,7 @@ class MaxiSynth extends MaxiInstrument {
         }
       }
     ];
-    this.sendDefaultParam();
+    //this.sendDefaultParam();
   }
 
   setOsc(osc) {
@@ -1060,6 +1426,10 @@ class MaxiSynth extends MaxiInstrument {
     return Nexus.mtof(n);
   }
 
+/**
+  Pick a preset
+  @param {number} index - index of preset
+  */
   preset(index) {
     if(index > 0 && index < this.presets.length)
     {
@@ -1091,14 +1461,14 @@ class MaxiSynth extends MaxiInstrument {
     randomButton.classList.add("random-btn")
     randomButton.classList.add("maxi-btn")
     randomButton.innerHTML = "Randomise"
-    randomButton.style.width = "70px";
+    randomButton.style.width = "80px";
 
     randomButton.onclick = ()=>{
       this.randomise();
     }
 
     const oscillatorSelector = document.createElement("select");
-    ["sin", "tri", "saw", "noise"].forEach((osc, i)=> {
+    ["sin", "tri", "saw", "square", "noise"].forEach((osc, i)=> {
       const option = document.createElement("option");
       option.value = i;
       option.text = osc;
@@ -1108,9 +1478,24 @@ class MaxiSynth extends MaxiInstrument {
 
     oscillatorSelector.onchange = ()=> {
       const index = parseInt(oscillatorSelector.selectedIndex);
-      this.onGUIChange(index, Object.keys(this.parameters).length - 1);
+      this.onGUIChange(index, Object.keys(this.parameters).indexOf("oscFn"));
     }
     this.outputGUI.oscFn = oscillatorSelector;
+
+    const lfoSelector = document.createElement("select");
+    ["sin", "tri", "saw", "square", "noise"].forEach((osc, i)=> {
+      const option = document.createElement("option");
+      option.value = i;
+      option.text = osc;
+      lfoSelector.appendChild(option);
+    });
+    lfoSelector.classList.add("maxi-selector")
+
+    lfoSelector.onchange = ()=> {
+      const index = parseInt(lfoSelector.selectedIndex);
+      this.onGUIChange(index, Object.keys(this.parameters).indexOf("lfoOscFn"));
+    }
+    this.outputGUI.lfoOscFn = lfoSelector;
 
     const printParamsButton = document.createElement("BUTTON");
     printParamsButton.innerHTML = "Print"
@@ -1146,16 +1531,26 @@ class MaxiSynth extends MaxiInstrument {
     }
 
     let cell = row.insertCell();
-    cell.appendChild(title);
-    cell = row.insertCell();
-    cell.appendChild(randomButton);
+    //cell.appendChild(title);
+
+    var label = document.createElement("p");
+    label.innerHTML = "osc:"
+    label.classList.add("selector-label")
+    cell.appendChild(label);
     cell.appendChild(oscillatorSelector);
+    label = document.createElement("p");
+    label.innerHTML = "lfo:"
+    label.classList.add("selector-label")
+    cell.appendChild(label);
+    cell.appendChild(lfoSelector);
     cell = row.insertCell();
     //cell.colSpan = "2"
     cell.appendChild(presetSelector);
     cell = row.insertCell();
+    cell.appendChild(randomButton);
+    cell = row.insertCell();
     cell.appendChild(printParamsButton);
-    var ignore = ["poly", "oscFn"];
+    var ignore = ["poly", "oscFn", "lfoOscFn"];
     var cellCtr = 0;
     for(let i = 0; i < Object.keys(this.parameters).length; i++)
     {
@@ -1193,19 +1588,31 @@ class MaxiSynth extends MaxiInstrument {
     this.useFreqSliders(this.parameters["poly"] == 0)
   }
 
+/**
+If true, synth uses two additional frequency parameters to contorl pitch,
+as opposed to taking pitch from the sequence.
+@param {boolean} useSliders
+ */
+
   useFreqSliders(useSliders) {
     this.setParam("poly", useSliders ? 0 : 1)
-    const vis = useSliders ? "visible" : "hidden"
+    //const vis = useSliders ? "visible" : "hidden"
+    const vis = useSliders ? "block" : "none"
     let elem = document.getElementsByClassName("cell_frequency");
     for (let e of elem) {
-      e.style.visibility = vis;
+      e.style.display = vis;
     };
     elem = document.getElementsByClassName("cell_frequency2");
     for (let e of elem) {
-      e.style.visibility = vis;
+      e.style.display = vis;
     };
   }
 }
+
+/**
+Class repesenting sampler object. Subclass of MaxiInstrument
+@extends MaxiInstrument
+*/
 
 class MaxiSampler extends MaxiInstrument {
    static parameters() {
@@ -1234,7 +1641,7 @@ class MaxiSampler extends MaxiInstrument {
     this.voices = 8;
     this.parameters = MaxiSampler.parameters();
     this.keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-    this.sendDefaultParam();
+    //this.sendDefaultParam();
   }
 
   getFreq(n)
@@ -1317,6 +1724,13 @@ class MaxiSampler extends MaxiInstrument {
     this.toggleGroup();
   }
 
+  /**
+    Load Sample into slot
+    @param {string} url - url of audio file. If MIMIC asset, just use filename.
+    @param {number} index - slot in sampler to load to
+    @example
+    * sampler.loadSample("myBigKick.wav", 0);
+    */
   loadSample(url, index) {
     if (this.audioContext !== undefined) {
       this.loadSampleToArray(index, url)

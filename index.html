@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src = "./libs/learner.v.0.2.js"></script>
-  <script src = "./libs/maxiInstruments.v.0.4.js"></script>
+  <script src = "./libs/learner.v.0.3.js"></script>
+  <script src = "./libs/maxiInstruments.v.0.5.js"></script>
   <button
     style = "margin-top:20px;margin-bottom:20px;height:30px;"
     onclick = "launchSynth()">Load Synths (User input required)
@@ -38,7 +38,7 @@
       instruments.guiElement = document.getElementById("synths");
       instruments.loadModules().then(()=> {
         synth = instruments.addSynth();
-        synth.mapped = ["lfoFrequency", "lfoAmpMod","attack", "release", "cutoff","Q","pan","lfoFilterMod", "sustain", "decay"];
+        synth.mapped = ["lfoFrequency", "lfoAmpMod","attack", "release", "cutoff","pan","lfoFilterMod", "sustain", "decay"];
         synth.setOsc(2);
         var em7 = [64, 67, 71, 74]
         var g7 = [62, 65, 67, 71]

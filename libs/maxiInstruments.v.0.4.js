@@ -1195,14 +1195,15 @@ class MaxiSynth extends MaxiInstrument {
 
   useFreqSliders(useSliders) {
     this.setParam("poly", useSliders ? 0 : 1)
-    const vis = useSliders ? "visible" : "hidden"
+    //const vis = useSliders ? "visible" : "hidden"
+    const vis = useSliders ? "block" : "none"
     let elem = document.getElementsByClassName("cell_frequency");
     for (let e of elem) {
-      e.style.visibility = vis;
+      e.style.display = vis;
     };
     elem = document.getElementsByClassName("cell_frequency2");
     for (let e of elem) {
-      e.style.visibility = vis;
+      e.style.display = vis;
     };
   }
 }
