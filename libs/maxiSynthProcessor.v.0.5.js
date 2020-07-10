@@ -717,7 +717,7 @@ class MaxiSynthProcessor {
       var wet = this.parameters.reverbMix.val;
       if(wet > 0.01) {
         var room = this.parameters.roomSize.val;
-        this.reverbOut = (this.verb.play(this.dfcOut, room, 0.2) * wet) + (this.dfcOut * (1 - wet))
+        this.reverbOut = (this.verb.play(this.dfcOut, room, 0.2) * wet * 0.3) + (this.dfcOut * (1 - wet))
       }
       else {
         this.reverbOut = this.dfcOut;

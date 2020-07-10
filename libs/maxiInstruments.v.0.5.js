@@ -781,8 +781,10 @@ Return any muted samples / synths back to original gain
     }
     else
     {
-      this.setParam("gain", this.prevGains);
-      this.prevGains = 0;
+      if(this.prevGains["gain"] !== undefined) {
+        this.setParam("gain", this.prevGains["gain"]);
+      }
+      this.prevGains = {};
     }
   }
   /**
@@ -816,7 +818,9 @@ Return any muted samples / synths back to original gain
     }
     else
     {
-      this.prevGains = this.parameters.gain.val;
+      if(this.prevGains["gain"] === undefined) {
+        this.prevGains["gain"] = this.parameters.gain.val;
+      }
       this.setParam("gain", 0);
     }
   }
@@ -1599,7 +1603,7 @@ as opposed to taking pitch from the sequence.
   useFreqSliders(useSliders) {
     this.setParam("poly", useSliders ? 0 : 1)
     //const vis = useSliders ? "visible" : "hidden"
-    const vis = useSliders ? "block" : "none"
+    const vis = useSliders ? "table-cell" : "none"
     let elem = document.getElementsByClassName("cell_frequency");
     for (let e of elem) {
       e.style.display = vis;
