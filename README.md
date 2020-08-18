@@ -16,6 +16,8 @@ We take care of all the storage, threading and GUI needs and all you have to do 
 
 You can [follow the guide](https://mimicproject.com/guides/learner) on the MIMIC site to learn more about the library
 
+Or you can [look at the API documentation](https://www.doc.gold.ac.uk/~lmcca002/Learner.html).
+
 ## MaxiInstruments.js
 
 MaxiInstruments is a class of simple synths and samplers that are designed to so that their parameters can be easily controlled using the Learner.js library.
@@ -23,6 +25,8 @@ MaxiInstruments is a class of simple synths and samplers that are designed to so
 They are AudioWorklets backed so do not get interrupted by beefy feature extractors one might use an an input or the running of a model to do the mapping.
 
 You can [follow the guide](https://mimicproject.com/guides/maxi-instrument) on the MIMIC site to learn more about the library
+
+Or you can [look at the API documentation](https://www.doc.gold.ac.uk/~lmcca002/MaxiInstrument.html).
 
 
 ## Running Locally
