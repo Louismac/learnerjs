@@ -1,3 +1,7 @@
+# editted from https://gist.github.com/UniIsland/1028b8e98b9963945bbfe37521f9350a
+# Attribution: https://stackoverflow.com/questions/21956683/enable-access-control-on-simple-http-server
+
+
 try:
     # Python 3
     from http.server import HTTPServer, SimpleHTTPRequestHandler, test as test_orig
