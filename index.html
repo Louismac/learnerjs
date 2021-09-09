@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src = "./libs/learner.v.0.3.js"></script>
-  <script src = "./libs/maxiInstruments.v.0.5.js"></script>
+  <script crossorigin src = "./libs/learner.v.0.3.js"></script>
+  <script crossorigin src = "./libs/maxiInstruments.v.0.6.js"></script>
   <button
     style = "margin-top:20px;margin-bottom:20px;height:30px;"
     onclick = "launchSynth()">Load Synths (User input required)
@@ -79,7 +79,7 @@
         learner.onOutput = (data)=> {
           instruments.updateMappedOutputs(data);
         };
-        instruments.setLoop(192)
+        instruments.setLoop(192,24,192/2)
         instruments.setTempo(86)
         sampler.setSequence(drumSeq);
       });
