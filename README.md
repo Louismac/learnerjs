@@ -21,7 +21,7 @@ Or you can [look at the API documentation](https://www.doc.gold.ac.uk/~lmcca002/
 
 ## MaxiInstruments.js
 
-For a number of reasons, currently, MaxiInstruments will **only work in Chrome**!
+For a number of reasons, currently, MaxiInstruments will **performs best in Chrome**!. It does work in Firefox, although if you are pushing limits computationally, you can get some artefacts.
 
 MaxiInstruments is a class of simple synths and samplers that are designed to so that their parameters can be easily controlled using the Learner.js library.
 
