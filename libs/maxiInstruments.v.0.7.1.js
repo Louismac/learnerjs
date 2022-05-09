@@ -2,7 +2,7 @@
 
 class RingBuffer {
   static getStorageForCapacity(capacity, type) {
-  
+
     if (!type.BYTES_PER_ELEMENT) {
       throw "Pass in a ArrayBuffer subclass";
     }
@@ -355,7 +355,7 @@ class MaxiInstruments {
       //onParamUpdate
       (index, val, send = true)=>{
         this.globalParameters[index] = val;
-        console.log("onParamUpdate", this.paramWriter, send)
+        //console.log("onParamUpdate", this.paramWriter, send)
         if(this.paramWriter !== undefined && send)
         {
           this.enqueue();

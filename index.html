@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- <script crossorigin src = "http://127.0.0.1:4200/libs/learner.v.0.4.js"></script>
-  <script crossorigin src = "http://127.0.0.1:4200/libs/maxiInstruments.v.0.7.1.js"></script> -->
-  <script crossorigin src = "https://mimicproject.com/libs/learner.v.0.4.js"></script>
-  <script crossorigin src = "https://mimicproject.com/libs/maxiInstruments.v.0.7.1.js"></script>
+  <script crossorigin src = "./libs/learner.v.0.4.js"></script>
+  <script crossorigin src = "./libs/maxiInstruments.v.0.7.1.js"></script>
+  <!-- <script crossorigin src = "https://mimicproject.com/libs/learner.v.0.4.js"></script>
+  <script crossorigin src = "https://mimicproject.com/libs/maxiInstruments.v.0.7.1.js"></script> -->
   <button
     style = "margin-top:20px;margin-bottom:20px;height:30px;"
     onclick = "launchSynth()">Load Synths (User input required)
@@ -36,7 +36,7 @@
 
     //OUPUT
     var origin = "https://mimicproject.com/libs";
-    // origin = "http://127.0.0.1:4200/libs"
+    origin = "http://127.0.0.1:4200/libs"
     const instruments = new MaxiInstruments(origin);
     var synth, sampler;
     const launchSynth = ()=> {
