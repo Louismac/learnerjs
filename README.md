@@ -57,7 +57,7 @@ You can change the urls appropriately if you are hosting elsewhere
 
 ### Locally hosted library
 
-The recommended way to do this is to use the python server we have provided (server.py). This is because we have to set some headers when serving the files to use SharedArrayBuffers, and this is what makes MaxiInstruments run smooooooth.
+The recommended way to do this is to use the python server we have provided (``server.py``). 
 
 Then when **in the project folder in the terminal** run the command below.
 
@@ -67,8 +67,13 @@ python server.py
 
 This serves the files in the folder at http://localhost:4200 and adds a header to get around CORS issues.
 
+## Run demo locally!
 
-### Run code locally!
+Then when **in the project folder in the terminal** run the command below.
+
+```
+python server.py
+```
 
 Then all you need to do is visit http://localhost:4200 to see the demo running
 
