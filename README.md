@@ -67,6 +67,19 @@ python server.py
 
 This serves the files in the folder at http://localhost:4200 and adds a header to get around CORS issues.
 
+
+**Include the libraries** 
+```
+<script crossorigin src = "./libs/learner.v.0.4.js"></script>
+<script crossorigin src = "./libs/maxiInstruments.v.0.7.1.js"></script>
+```
+
+**Tell MaxiInstruments where to find libraries** 
+
+```
+const instruments = new MaxiInstruments("http://localhost:4200/libs");
+```
+
 ## Run demo locally!
 
 Then when **in the project folder in the terminal** run the command below.
