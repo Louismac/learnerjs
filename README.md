@@ -41,13 +41,13 @@ For ``MaxiInstruments`` there are some specfic headers related to [SharedArrayBu
 
 If you have access to the internet whilst running libraries, this may be the best option. 
 
-**Include the libraries 
+**Include the libraries** 
 ```
 <script crossorigin src = "https://mimicproject.com/libs/learner.v.0.4.js"></script>
 <script crossorigin src = "https://mimicproject.com/libs/maxiInstruments.v.0.7.1.js"></script>
 ```
 
-**Tell MaxiInstruments where to find libraries 
+**Tell MaxiInstruments where to find libraries** 
 
 ```
 const instruments = new MaxiInstruments("https://mimicproject.com/libs");
