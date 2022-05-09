@@ -2,6 +2,7 @@
 
 class RingBuffer {
   static getStorageForCapacity(capacity, type) {
+  
     if (!type.BYTES_PER_ELEMENT) {
       throw "Pass in a ArrayBuffer subclass";
     }
@@ -213,7 +214,9 @@ class ArrayReader {
  */
 class MaxiInstruments {
 
-  constructor() {
+  constructor(origin) {
+    console.log("loading MaxiInstruments")
+
     /** Holds the sampler objects, in order of added
         @var {MaxiSampler[]} */
     this.samplers = [];
@@ -228,6 +231,7 @@ class MaxiInstruments {
     this.synthProcessorName = 'maxi-synth-processor';
     this.version = "v.0.7.1";
     this.TICKS_PER_BEAT = 24;
+
     var head = document.getElementsByTagName('HEAD')[0];
     let nexusUI = document.createElement('script');
     nexusUI.type = 'text/javascript';
@@ -235,27 +239,37 @@ class MaxiInstruments {
     nexusUI.onload = function(){
       console.log("nexusUI onload!");
     };
-    let origin = document.location.origin
-    if(origin.includes("file"))
-    {
-      origin = "http://127.0.0.1:4200"
+    if(origin === undefined) {
+      origin = document.location.origin + "/libs"
     }
-    nexusUI.src = origin + '/libs/nexusUI.js';
+    this.origin = origin;
+    if(this.origin.includes("file"))
+    {
+      this.origin = "http://127.0.0.1:4200/libs"
+    }
+    nexusUI.src = 'https://mimicproject.com/libs/nexusUI.js';
     head.appendChild(nexusUI);
+
     var link = document.createElement('link');
     link.rel = 'stylesheet';
     link.type = 'text/css';
-    link.href = origin + '/libs/maxiInstruments.css';
+    link.href = 'https://mimicproject.com/libs/maxiInstruments.css';
     head.appendChild(link);
+
+
+    // var meta = document.createElement('meta');
+    // meta.httpEquiv = "origin-trial";
+    // meta.content = "AiYSmSRmU1z6CKo9EFpC7stfywHSVXN1bHH6VpKgzyAwlwgJMD8by7P0lsGEXK+qUt0s9bM28VeeKPTkdVxMywsAAAB7eyJvcmlnaW4iOiJodHRwczovL3NhbmRib3guY2FibGVzLmdsOjQ0MyIsImZlYXR1cmUiOiJVbnJlc3RyaWN0ZWRTaGFyZWRBcnJheUJ1ZmZlciIsImV4cGlyeSI6MTY1ODg3OTk5OSwiaXNTdWJkb21haW4iOnRydWV9";
+    // head.appendChild(meta);
   }
 
   getSynthName() {
-    let origin = document.location.origin
-    if(origin.includes("file"))
+
+    if(this.origin.includes("file"))
     {
-      origin = "http://127.0.0.1:4200"
+      this.origin = "http://127.0.0.1:4200"
     }
-    return origin + "/libs/maxiSynthProcessor." + this.version + ".js";
+    return this.origin + "/maxiSynthProcessor." + this.version + ".js";
   }
 
   getInstruments() {
@@ -327,14 +341,67 @@ class MaxiInstruments {
     return className
   }
 
+  createSynth(params) {
+    //Make synth object
+    var synth = new MaxiSynth(
+      //audio node
+      this.node,
+      //index
+      this.synths.length,
+      //type of instrument
+      "synth",
+      //context
+      this.audioContext,
+      //onParamUpdate
+      (index, val, send = true)=>{
+        this.globalParameters[index] = val;
+        console.log("onParamUpdate", this.paramWriter, send)
+        if(this.paramWriter !== undefined && send)
+        {
+          this.enqueue();
+        }
+      },
+      //Parameters
+      params,
+      //offset
+      this.numParams
+    );
+
+
+    if(this.guiElement !== undefined)
+    {
+      synth.addGUI(this.guiElement);
+    }
+    this.synths.push(synth);
+    return synth;
+  }
+
+
+/*
+//Else try url
+console.log("fetch")
+fetch(location).then((response)=> {
+  if (response.ok) {
+    console.log("response.ok")
+    response.text.then((text)=>{
+      console.log("sending text from url")
+      sendSynth(text)
+    });
+  } else {
+    //Else use string literal
+    console.log("http fail")
+    console.log("HTTP-Error: " + response.status);
+    sendSynth(location)
+  }
+});
+*/
   /**
   Create a MaxiSynth instance
   @returns {Object} the MaxiSynth object
    */
   addSynth(location, params) {
-    let synth;
+    var synth;
     if(this.audioContext !== undefined) {
-
       if(params === undefined) {
         params = MaxiSynth.parameters();
       } else {
@@ -347,85 +414,36 @@ class MaxiInstruments {
         params["lfoOscFn"] = {min:0, max:1, val:0}
         params["oscFn"] = {min:0, max:1, val:0}
       }
+      var customSynth = "default";
       //Get code for custom synth
       if(location !== undefined) {
-        const sendSynth= (customSynth)=>{
-          //Get class name
-          const className = this.getClass(customSynth)
-          customSynth = customSynth.replace(/Maximilian/g, "Module");
-          //Wrap in function (to be eval'ed)
-          customSynth = "()=>{"+customSynth+"return new " + className + "()}";
-          console.log(customSynth)
-          //Send to port
-          this.node.port.postMessage({
-              addSynth:customSynth,
-              params:Object.keys(params),
-              offset:this.numParams
-            });
-        }
         //Try script element
         let scriptElement = document.getElementById(location)
         if(scriptElement)
         {
-          sendSynth(scriptElement.innerHTML)
+          customSynth = scriptElement.innerHTML;
+        } else {
+          //string literal
+          customSynth = location;
         }
-        else
-        {
-          //Else try url
-          fetch(location).then((response)=> {
-            if (response.ok) {
-              response.text.then((text)=>{
-                sendSynth(text)
-              });
-            } else {
-              //Else use string literal
-              console.log("HTTP-Error: " + response.status);
-              sendSynth(location)
-            }
-          });
-        }
-      } else {
-        //If no custom definition, send default
-        this.node.port.postMessage({
-            addSynth:"default",
-            params:Object.keys(params),
-            offset:this.numParams
-          });
+        const className = this.getClass(customSynth)
+        customSynth = customSynth.replace(/Maximilian/g, "Module");
+        //Wrap in function (to be eval'ed)
+        customSynth = "()=>{"+customSynth+"return new " + className + "()}";
       }
-
-      //Make synth object
-      synth = new MaxiSynth(
-        //audio node
-        this.node,
-        //index
-        this.synths.length,
-        //type of instrument
-        "synth",
-        //context
-      	this.audioContext,
-        //onParamUpdate
-        (index, val, send = true)=>{
-          this.globalParameters[index] = val;
-          if(this.paramWriter !== undefined && send)
-          {
-            this.enqueue();
-          }
-        },
-        //Parameters
-        params,
-        //offset
-        this.numParams
-      );
+      console.log(customSynth)
+      //send to audio thread
+      this.node.port.postMessage({
+          addSynth:customSynth,
+          params:Object.keys(params),
+          offset:this.numParams
+      });
+      //Create object
+      synth = this.createSynth(params);
       //Update global offset
       this.numParams += Object.keys(params).length;
-
-      if(this.guiElement !== undefined)
-      {
-        synth.addGUI(this.guiElement);
-      }
-      this.synths.push(synth);
     }
-    return synth;
+    return synth
   }
 
   enqueue() {
@@ -585,7 +603,7 @@ Load the modules. Must be done before any synths or samplers are added
       if (this.audioContext === undefined) {
         try {
            /** Holds the main AudioContext
-                @var {Object} */
+        @var {Object} */
           this.audioContext = new AudioContext({
             latencyHint:'playback',
             sample: 44100
@@ -602,7 +620,7 @@ Load the modules. Must be done before any synths or samplers are added
             reject(err);
           });
         } catch (err) {
-          console.log("here")
+          console.log("error loading modules", err)
           reject(err);
         }
       }
@@ -808,13 +826,6 @@ class MaxiInstrument {
     this.TICKS_PER_BEAT = 24;
     this.NUM_SYNTHS = 6;
     this.NUM_SAMPLERS = 6;
-    this.NUM_SYNTH_PARAMS = Object.keys(MaxiSynth.parameters()).length;
-    this.NUM_SAMPLER_PARAMS = Object.keys(MaxiSampler.parameters()).length;
-    // this.NUM_SYNTH_PARAMS = 17;
-    // this.NUM_SAMPLER_PARAMS = 24;
-    this.GLOBAL_OFFSET =
-      (this.NUM_SYNTHS * this.NUM_SYNTH_PARAMS) +
-      (this.NUM_SAMPLERS * this.NUM_SAMPLER_PARAMS);
     this.docId = "local";
     if(window.frameElement)
     {
@@ -882,7 +893,10 @@ Return any muted samples / synths back to original gain
       }
       this.prevGains = {};
     }
-    document.getElementById("muteButton" + this.index).innerHTML = "Mute"
+    var muteButton = document.getElementById("muteButton" + this.index)
+    if(muteButton) {
+      muteButton.innerHTML = "Mute"
+    }
   }
   /**
   Mute given synth or samples
@@ -920,7 +934,10 @@ Return any muted samples / synths back to original gain
       }
       this.setParam("gain", 0);
     }
-    document.getElementById("muteButton" + this.index).innerHTML = "Unmute"
+    var muteButton = document.getElementById("muteButton" + this.index)
+    if(muteButton) {
+      muteButton.innerHTML = "Unmute"
+    }
   }
 
 /**
@@ -1531,7 +1548,7 @@ class MaxiSynth extends MaxiInstrument {
         }
       }
     ];
-    //this.sendDefaultParam();
+    this.sendDefaultParam();
   }
 
   setOsc(osc) {
