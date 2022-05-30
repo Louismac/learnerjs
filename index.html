@@ -14,6 +14,27 @@
   <div id = "synths"></div>
 </head>
 <body>
+
+  <script id = "synthCode">
+    class MinimalSynth extends MaxiSynthProcessorBase {
+
+      //Called once at begining (declare custom variables)
+      setup() {
+        this.samples = [new Maximilian.maxiSample()]
+      }
+
+      //Called once for every oscillator currently triggered for polyphony (every sample)
+      noteSignal(envVol, index, freq, vel) {
+        let signal = this.samples[freq].playOnZX(this.adsr[index].trigger);
+        return signal;
+      }
+
+      //Called once at end of process loop (every sample)
+      endSignal(noteSignals) {
+        return noteSignals;
+      }
+    }
+    </script>
   <script type="text/javascript">
  	  const learner = new Learner({docId:"test"})
     learner.addGUI(document.getElementById("dataset"))
@@ -42,51 +63,23 @@
     const launchSynth = ()=> {
       instruments.guiElement = document.getElementById("synths");
       instruments.loadModules().then(()=> {
-        synth = instruments.addSynth();
-        synth.mapped = ["lfoFrequency", "lfoAmpMod","attack", "release", "cutoff","pan","lfoFilterMod", "sustain", "decay"];
-        synth.setOsc(2);
-        var em7 = [64, 67, 71, 74]
-        var g7 = [62, 65, 67, 71]
-        var cmaj9 = [60, 64, 67, 71]
-        var fsharpm = [61, 64, 66, 69]
-        var b7 = [59, 63, 66, 71]
-        var synthSeq = [
-          {s:0, l:48, p:em7},
-          {s:48, l:48, p:g7},
-          {s:96, l:48, p:cmaj9},
-          {s:144, l:24, p:fsharpm},
-          {s:168, l:24, p:b7},
-        ];
-        synth.setSequence(synthSeq)
+        const parameters = {
+          freq:{min:40, max:400, val:100},
+        }
+        //Pass custom code and parameters
+        synth = instruments.addSynth("synthCode", parameters);
 
-        sampler = instruments.addSampler();
         let origin = document.location.origin
         if(origin.includes("file"))
         {
           origin = "http://127.0.0.1:4200"
         }
-        sampler.mapped = ["pan_0", "pan_1", "pan_2"];
-        sampler.loadSample(origin + "/sounds/909b.wav", 0);
-        sampler.loadSample(origin + "/sounds/909closed.wav", 1);
-        sampler.loadSample(origin + "/sounds/909.wav", 2);
-        let drumSeq = [
-           {pitch:0, start:0},
-           {pitch:0, start:18},
-           {pitch:0, start:42},
-           {pitch:0, start:54},
-           {pitch:2, start:24},
-           {pitch:2, start:72},
-        ];
-        for(let i = 0; i < 32; i++) {
-          drumSeq.push({pitch:1, start:i*6});
-        }
-        learner.addRegression(instruments.getNumMappedOutputs(), false, 10);
-        learner.onOutput = (data)=> {
-          instruments.updateMappedOutputs(data);
-        };
-        instruments.setLoop(192,24,192/2)
-        instruments.setTempo(86)
-        sampler.setSequence(drumSeq);
+        synth.loadSample(origin + "/sounds/909.wav", 0);
+        const samplerSeq = [
+           {freq:0, start:0, velocity:127}, //play sample 0
+         ]
+        synth.setSequence(samplerSeq);
+        synth.setLoop(2)
       });
     }
 </script>

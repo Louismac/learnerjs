@@ -2,7 +2,6 @@
 
 class RingBuffer {
   static getStorageForCapacity(capacity, type) {
-
     if (!type.BYTES_PER_ELEMENT) {
       throw "Pass in a ArrayBuffer subclass";
     }
@@ -215,8 +214,6 @@ class ArrayReader {
 class MaxiInstruments {
 
   constructor(origin) {
-    console.log("loading MaxiInstruments")
-
     /** Holds the sampler objects, in order of added
         @var {MaxiSampler[]} */
     this.samplers = [];
@@ -257,10 +254,10 @@ class MaxiInstruments {
     head.appendChild(link);
 
 
-    // var meta = document.createElement('meta');
-    // meta.httpEquiv = "origin-trial";
-    // meta.content = "AiYSmSRmU1z6CKo9EFpC7stfywHSVXN1bHH6VpKgzyAwlwgJMD8by7P0lsGEXK+qUt0s9bM28VeeKPTkdVxMywsAAAB7eyJvcmlnaW4iOiJodHRwczovL3NhbmRib3guY2FibGVzLmdsOjQ0MyIsImZlYXR1cmUiOiJVbnJlc3RyaWN0ZWRTaGFyZWRBcnJheUJ1ZmZlciIsImV4cGlyeSI6MTY1ODg3OTk5OSwiaXNTdWJkb21haW4iOnRydWV9";
-    // head.appendChild(meta);
+    var meta = document.createElement('meta');
+    meta.httpEquiv = "origin-trial";
+    meta.content = "AiYSmSRmU1z6CKo9EFpC7stfywHSVXN1bHH6VpKgzyAwlwgJMD8by7P0lsGEXK+qUt0s9bM28VeeKPTkdVxMywsAAAB7eyJvcmlnaW4iOiJodHRwczovL3NhbmRib3guY2FibGVzLmdsOjQ0MyIsImZlYXR1cmUiOiJVbnJlc3RyaWN0ZWRTaGFyZWRBcnJheUJ1ZmZlciIsImV4cGlyeSI6MTY1ODg3OTk5OSwiaXNTdWJkb21haW4iOnRydWV9";
+    head.appendChild(meta);
   }
 
   getSynthName() {
@@ -334,7 +331,7 @@ class MaxiInstruments {
     m = regex.exec(str)
     if(m) {
       m.forEach((match, groupIndex) => {
-          console.log(`Found match, group ${groupIndex}: ${match}`);
+          //console.log(`Found match, group ${groupIndex}: ${match}`);
           className = match;
       });
     }
@@ -431,7 +428,7 @@ fetch(location).then((response)=> {
         //Wrap in function (to be eval'ed)
         customSynth = "()=>{"+customSynth+"return new " + className + "()}";
       }
-      console.log(customSynth)
+      //console.log(customSynth)
       //send to audio thread
       this.node.port.postMessage({
           addSynth:customSynth,
@@ -447,6 +444,7 @@ fetch(location).then((response)=> {
   }
 
   enqueue() {
+    //console.log("enqueue", this.globalParameters)
     let success = this.paramWriter.enqueue(this.globalParameters);
     this.retryEnqueue(success, 0)
   }
@@ -1189,7 +1187,7 @@ Randomise all mapped parameters
 
   sendDefaultParam() {
     setTimeout(()=>{
-      console.log("sendDefaultParam")
+      //console.log("sendDefaultParam")
       const keys = Object.keys(this.parameters);
       keys.forEach((p, i)=> {
         const send = i == keys.length - 1
@@ -1307,6 +1305,139 @@ Randomise all mapped parameters
     let scale = max - min;
     let scaled = (val - min) / scale;
     return scaled
+  }
+
+  /**
+    Load Sample into slot
+    @param {string} url - url of audio file. If MIMIC asset, just use filename.
+    @param {number} index - slot in sampler to load to
+    @example
+    * sampler.loadSample("myBigKick.wav", 0);
+    */
+  loadSample(url, index) {
+    if (this.audioContext !== undefined) {
+      this.loadSampleToArray(index, url)
+    } else throw "Audio Context is not initialised!";
+  }
+
+  sendAudioArray(sampleWorkletObjectName, float32Array) {
+    if (float32Array !== undefined && this.node !== undefined) {
+      console.log("loading sample client",this.instrument, this.index)
+      this.node.port.postMessage({
+        audio:{
+          instrument:this.instrument,
+          index:this.index,
+          val:{
+            audioBlob: float32Array,
+            index:parseInt(sampleWorkletObjectName)
+          }
+        }
+      });
+    }
+  }
+
+  getArrayAsVectorDbl (arrayIn) {
+    var vecOut = new exports.VectorDouble();
+    for (var i = 0; i < arrayIn.length; i++) {
+      vecOut.push_back(arrayIn[i]);
+    }
+    return vecOut;
+  };
+
+  getBase64(str) {
+    //check if the string is a data URI
+    if (str.indexOf(';base64,') !== -1) {
+      //see where the actual data begins
+      var dataStart = str.indexOf(';base64,') + 8;
+      //check if the data is base64-encoded, if yes, return it
+      // taken from
+      // http://stackoverflow.com/a/8571649
+      return str.slice(dataStart).match(/^([A-Za-z0-9+\/]{4})*([A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}==)$/) ? str.slice(dataStart) : false;
+    } else return false;
+  };
+
+  //
+
+  removePaddingFromBase64(input) {
+    var lkey = this.keyStr.indexOf(input.charAt(input.length - 1));
+    if (lkey === 64) {
+      return input.substring(0, input.length - 1);
+    }
+    return input;
+  };
+
+  loadSampleToArray (sampleObjectName, url) {
+    var data = [];
+
+    var context = this.audioContext;
+
+    var b64 = this.getBase64(url);
+    if (b64) {
+      var ab_bytes = (b64.length / 4) * 3;
+      var arrayBuffer = new ArrayBuffer(ab_bytes);
+
+      b64 = this.removePaddingFromBase64(this.removePaddingFromBase64(b64));
+
+      var bytes = parseInt((b64.length / 4) * 3, 10);
+
+      var uarray;
+      var chr1, chr2, chr3;
+      var enc1, enc2, enc3, enc4;
+      var i = 0;
+      var j = 0;
+
+      uarray = new Uint8Array(arrayBuffer);
+
+      b64 = b64.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+      for (i = 0; i < bytes; i += 3) {
+        //get the 3 octects in 4 ascii chars
+        enc1 = this.keyStr.indexOf(b64.charAt(j++));
+        enc2 = this.keyStr.indexOf(b64.charAt(j++));
+        enc3 = this.keyStr.indexOf(b64.charAt(j++));
+        enc4 = this.keyStr.indexOf(b64.charAt(j++));
+
+        chr1 = (enc1 << 2) | (enc2 >> 4);
+        chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+        chr3 = ((enc3 & 3) << 6) | enc4;
+
+        uarray[i] = chr1;
+        if (enc3 !== 64) {
+          uarray[i + 1] = chr2;
+        }
+        if (enc4 !== 64) {
+          uarray[i + 2] = chr3;
+        }
+      }
+      context.decodeAudioData(
+        arrayBuffer, // has its content-type determined by sniffing
+        (buffer)=> {
+          data = buffer.getChannelData(0);
+          if (data) this.sendAudioArray(sampleObjectName, data);
+        },
+        (buffer)=> { // errorCallback
+          console.log("Error decoding source!");
+        }
+      );
+    } else {
+      var request = new XMLHttpRequest();
+      request.addEventListener("load", () => console.log("The transfer is complete."));
+      request.open("GET", url, true);
+      request.responseType = "arraybuffer";
+      request.onload = ()=>{
+        context.decodeAudioData(
+          request.response,
+          (buffer)=> {
+            data = buffer.getChannelData(0);
+            if (data) this.sendAudioArray(sampleObjectName, data);
+          },
+          (buffer)=> {
+            console.log("Error decoding source!");
+          },
+        )
+      };
+      request.send();
+    }
   }
 }
 
@@ -1874,137 +2005,5 @@ class MaxiSampler extends MaxiInstrument {
     }
     this.loadParamValues();
     this.toggleGroup();
-  }
-
-  /**
-    Load Sample into slot
-    @param {string} url - url of audio file. If MIMIC asset, just use filename.
-    @param {number} index - slot in sampler to load to
-    @example
-    * sampler.loadSample("myBigKick.wav", 0);
-    */
-  loadSample(url, index) {
-    if (this.audioContext !== undefined) {
-      this.loadSampleToArray(index, url)
-    } else throw "Audio Context is not initialised!";
-  }
-
-  sendAudioArray(sampleWorkletObjectName, float32Array) {
-    if (float32Array !== undefined && this.node !== undefined) {
-      this.node.port.postMessage({
-        audio:{
-          instrument:"sampler",
-          index:this.index,
-          val:{
-            audioBlob: float32Array,
-        	  index:parseInt(sampleWorkletObjectName)
-          }
-        }
-      });
-    }
-  }
-
-  getArrayAsVectorDbl (arrayIn) {
-    var vecOut = new exports.VectorDouble();
-    for (var i = 0; i < arrayIn.length; i++) {
-      vecOut.push_back(arrayIn[i]);
-    }
-    return vecOut;
-  };
-
-  getBase64(str) {
-    //check if the string is a data URI
-    if (str.indexOf(';base64,') !== -1) {
-      //see where the actual data begins
-      var dataStart = str.indexOf(';base64,') + 8;
-      //check if the data is base64-encoded, if yes, return it
-      // taken from
-      // http://stackoverflow.com/a/8571649
-      return str.slice(dataStart).match(/^([A-Za-z0-9+\/]{4})*([A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}==)$/) ? str.slice(dataStart) : false;
-    } else return false;
-  };
-
-  //
-
-  removePaddingFromBase64(input) {
-    var lkey = this.keyStr.indexOf(input.charAt(input.length - 1));
-    if (lkey === 64) {
-      return input.substring(0, input.length - 1);
-    }
-    return input;
-  };
-
-  loadSampleToArray (sampleObjectName, url) {
-    var data = [];
-
-    var context = this.audioContext;
-
-    var b64 = this.getBase64(url);
-    if (b64) {
-      var ab_bytes = (b64.length / 4) * 3;
-      var arrayBuffer = new ArrayBuffer(ab_bytes);
-
-      b64 = this.removePaddingFromBase64(this.removePaddingFromBase64(b64));
-
-      var bytes = parseInt((b64.length / 4) * 3, 10);
-
-      var uarray;
-      var chr1, chr2, chr3;
-      var enc1, enc2, enc3, enc4;
-      var i = 0;
-      var j = 0;
-
-      uarray = new Uint8Array(arrayBuffer);
-
-      b64 = b64.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-
-      for (i = 0; i < bytes; i += 3) {
-        //get the 3 octects in 4 ascii chars
-        enc1 = this.keyStr.indexOf(b64.charAt(j++));
-        enc2 = this.keyStr.indexOf(b64.charAt(j++));
-        enc3 = this.keyStr.indexOf(b64.charAt(j++));
-        enc4 = this.keyStr.indexOf(b64.charAt(j++));
-
-        chr1 = (enc1 << 2) | (enc2 >> 4);
-        chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-        chr3 = ((enc3 & 3) << 6) | enc4;
-
-        uarray[i] = chr1;
-        if (enc3 !== 64) {
-          uarray[i + 1] = chr2;
-        }
-        if (enc4 !== 64) {
-          uarray[i + 2] = chr3;
-        }
-      }
-      context.decodeAudioData(
-        arrayBuffer, // has its content-type determined by sniffing
-        (buffer)=> {
-          data = buffer.getChannelData(0);
-          if (data) this.sendAudioArray(sampleObjectName, data);
-        },
-        (buffer)=> { // errorCallback
-          console.log("Error decoding source!");
-        }
-      );
-    } else {
-      var request = new XMLHttpRequest();
-      request.addEventListener("load", () => console.log("The transfer is complete."));
-      request.open("GET", url, true);
-      request.responseType = "arraybuffer";
-      request.onload = ()=>{
-        context.decodeAudioData(
-          request.response,
-          (buffer)=> {
-            data = buffer.getChannelData(0);
-            if (data) this.sendAudioArray(sampleObjectName, data);
-          },
-          (buffer)=> {
-            console.log("Error decoding source!");
-          },
-        )
-      };
-      request.send();
-    }
   }
 }
