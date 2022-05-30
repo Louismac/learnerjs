@@ -21,17 +21,20 @@
       //Called once at begining (declare custom variables)
       setup() {
         this.samples = [new Maximilian.maxiSample()]
+        this.osc = new Maximilian.maxiOsc();
       }
 
       //Called once for every oscillator currently triggered for polyphony (every sample)
       noteSignal(envVol, index, freq, vel) {
-        let signal = this.samples[freq].playOnZX(this.adsr[index].trigger);
+        let signal = this.samples[freq].playOnZXAtSpeed(this.adsr[index].trigger,1.0) * envVol;
         return signal;
       }
 
       //Called once at end of process loop (every sample)
       endSignal(noteSignals) {
-        return noteSignals;
+        //this.samples[0].playOnZX(this.oscillators[0].sinewave(0.01));
+        //return this.samples[0].playOnZX(this.osc.sinewave(0.1));
+        return [noteSignals]
       }
     }
     </script>
@@ -79,7 +82,7 @@
            {freq:0, start:0, velocity:127}, //play sample 0
          ]
         synth.setSequence(samplerSeq);
-        synth.setLoop(2)
+        synth.setLoop(24)
       });
     }
 </script>
