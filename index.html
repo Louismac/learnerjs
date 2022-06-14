@@ -1,10 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script crossorigin src = "./libs/learner.v.0.4.js"></script>
-  <script crossorigin src = "./libs/maxiInstruments.v.0.7.1.js"></script>
-  <!-- <script crossorigin src = "https://mimicproject.com/libs/learner.v.0.4.js"></script>
-  <script crossorigin src = "https://mimicproject.com/libs/maxiInstruments.v.0.7.1.js"></script> -->
+  <script crossorigin src = "./libs/maxiInstruments.v.0.7.2.js"></script>
   <button
     style = "margin-top:20px;margin-bottom:20px;height:30px;"
     onclick = "launchSynth()">Load Synths (User input required)
@@ -20,43 +17,34 @@
 
       //Called once at begining (declare custom variables)
       setup() {
-        this.samples = [new Maximilian.maxiSample()]
-        this.osc = new Maximilian.maxiOsc();
+        this.numSamples = 8;
+        this.samples = [];
+        this.triggeredThisLoop = new Array(this.numSamples).fill(false);
+        for(let i = 0; i < this.numSamples; i++)
+        {
+          this.samples.push(new Maximilian.maxiSample());
+        }
       }
 
-      //Called once for every oscillator currently triggered for polyphony (every sample)
       noteSignal(envVol, index, freq, vel) {
-        let signal = this.samples[freq].playOnZXAtSpeed(this.adsr[index].trigger,1.0) * envVol;
+        let signal = 0;
+        if(!this.triggeredThisLoop[freq]) {
+          this.triggeredThisLoop[freq] = true
+          let waveLength = this.sampleRate/this.samples[freq].getLength()
+          let trig = this.oscillators[index].impulse(waveLength)
+          signal = this.samples[freq].playOnZXAtSpeed(trig, 1.0) * envVol * this.numSamples;
+        }
         return signal;
       }
 
       //Called once at end of process loop (every sample)
-      endSignal(noteSignals) {
-        //this.samples[0].playOnZX(this.oscillators[0].sinewave(0.01));
-        //return this.samples[0].playOnZX(this.osc.sinewave(0.1));
-        return [noteSignals]
+      endSignal(signal) {
+        this.triggeredThisLoop = new Array(this.numSamples).fill(false);
+        return [signal, signal];
       }
     }
     </script>
   <script type="text/javascript">
- 	  const learner = new Learner({docId:"test"})
-    learner.addGUI(document.getElementById("dataset"))
-    //learner.addClassifier(3)
-    // let y = [0]
-    const recordXY = (event)=> {
-      learner.newExample([event.clientX, event.clientY], instruments.getMappedOutputs());
-    }
-    document.getElementById("input").addEventListener("click", recordXY);
-    //Callback for result
-    learner.onOutput = (output)=> {
-      //y = output
-      instruments.updateMappedOutputs(output)
-      console.log(output)
-    };
-    learner.setModelOptions({
-      numHiddenNodes:8
-    });
-
 
     //OUPUT
     var origin = "https://mimicproject.com/libs";
@@ -67,7 +55,6 @@
       instruments.guiElement = document.getElementById("synths");
       instruments.loadModules().then(()=> {
         const parameters = {
-          freq:{min:40, max:400, val:100},
         }
         //Pass custom code and parameters
         synth = instruments.addSynth("synthCode", parameters);
@@ -75,14 +62,18 @@
         let origin = document.location.origin
         if(origin.includes("file"))
         {
-          origin = "http://127.0.0.1:4200"
+          origin = "http://localhost:4200"
         }
-        synth.loadSample(origin + "/sounds/909.wav", 0);
+        // load from a specific origin, from a specific folder, into a specific slot.
+        synth.loadSample(origin + "/sounds/drill.wav", 0);
         const samplerSeq = [
-           {freq:0, start:0, velocity:127}, //play sample 0
+           {f:0, s:0, l:48},
          ]
-        synth.setSequence(samplerSeq);
-        synth.setLoop(24)
+        synth.setSequence(samplerSeq, 4);
+        synth.setLoop(64, 4);
+        // instruments.setOnTick((playHeads)=>{
+        //   console.log(playHeads[0])
+        // })
       });
     }
 </script>

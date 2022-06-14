@@ -829,6 +829,7 @@ class MaxiInstrument {
     {
       this.docId = window.frameElement.name
     }
+    this.keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
   }
   /**
     Set the Loop of this instrument
@@ -1907,7 +1908,6 @@ class MaxiSampler extends MaxiInstrument {
     super(node, index, instrument, audioContext, onParamUpdate, params, offset);
     this.voices = 8;
     this.parameters = params
-    this.keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
   }
 
   getFreq(n)
