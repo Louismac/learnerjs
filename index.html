@@ -6,7 +6,6 @@
     style = "margin-top:20px;margin-bottom:20px;height:30px;"
     onclick = "launchSynth()">Load Synths (User input required)
   </button>
-  <div style = "width:400px;height:200px;background-color:blue;" id = "input"></div>
   <div style = "width:400px;" id = "dataset"></div>
   <div id = "synths"></div>
 </head>
@@ -30,9 +29,10 @@
         let signal = 0;
         if(!this.triggeredThisLoop[freq]) {
           this.triggeredThisLoop[freq] = true
-          let waveLength = this.sampleRate/this.samples[freq].getLength()
-          let trig = this.oscillators[index].impulse(waveLength)
-          signal = this.samples[freq].playOnZXAtSpeed(trig, 1.0) * envVol * this.numSamples;
+          const rate = this.parameters.rate.val;
+          const waveLength = this.sampleRate/this.samples[freq].getLength()
+          const trig = this.oscillators[index].impulse(waveLength * rate)
+          signal = this.samples[freq].playOnZXAtSpeed(trig, rate) * envVol * this.numSamples;
         }
         return signal;
       }
@@ -55,6 +55,7 @@
       instruments.guiElement = document.getElementById("synths");
       instruments.loadModules().then(()=> {
         const parameters = {
+          rate:{min:0,max:2,val:1}
         }
         //Pass custom code and parameters
         synth = instruments.addSynth("synthCode", parameters);
@@ -65,9 +66,11 @@
           origin = "http://localhost:4200"
         }
         // load from a specific origin, from a specific folder, into a specific slot.
-        synth.loadSample(origin + "/sounds/drill.wav", 0);
+        synth.loadSample(origin + "/sounds/909b.wav", 0);
+        synth.loadSample(origin + "/sounds/909.wav", 1);
         const samplerSeq = [
-           {f:0, s:0, l:48},
+           {f:0, s:0, l:16},
+           {f:1, s:24, l:16},
          ]
         synth.setSequence(samplerSeq, 4);
         synth.setLoop(64, 4);

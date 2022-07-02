@@ -45,6 +45,3 @@ python server.py
 This serves the files in the folder at http://localhost:4200 and adds a header to get around CORS issues.
 
 Then all you need to do is visit http://localhost:4200 to see the demo running
-
-Remember, currently, **MaxiInstruments will only work in Chrome**!
-
