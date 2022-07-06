@@ -280,7 +280,7 @@ class Learner {
         numHiddenNodes = this.modelOptions.numHiddenNodes;
       }
       this.myModel = tf.sequential()
-      this.myModel.add(tf.layers.dense({inputShape: [numInputs], units: 1}))
+      this.myModel.add(tf.layers.dense({inputShape: [numInputs], units: numInputs}))
       for(let i = 0; i < numHiddenLayers; i++) {
         this.myModel.add(tf.layers.dense({units: numHiddenNodes, activation: 'sigmoid'}))
       }
@@ -291,7 +291,7 @@ class Learner {
         loss: 'meanSquaredError',
         metrics: ['mse']
       });
-
+      this.myModel.summary();
     }
     return new Promise((resolve, reject)=> {
       if(typeof tf === "undefined") {
@@ -671,13 +671,13 @@ class Learner {
             let x = this.normalise(tf.tensor(dataset.map(i=>i.input)))
             const y = tf.tensor(dataset.map(o=>o.output))
             let onEpochEnd = (epoch, logs)=> {
-              console.log(epoch, logs.mse)
+              console.log("epoch:",epoch, "mse:",logs.mse)
             }
             this.myModel.fit(x, y, {
               epochs:epochs,
               callbacks:{onEpochEnd}
             }).then((info)=> {
-              console.log("trainingend",info.history)
+              console.log("training end",info.history)
               this.trainingEnd();
             })
           });
