@@ -1,84 +1,47 @@
-<!DOCTYPE html>
 <html>
 <head>
-  <script crossorigin src = "./libs/maxiInstruments.v.0.7.2.js"></script>
-  <button
-    style = "margin-top:20px;margin-bottom:20px;height:30px;"
-    onclick = "launchSynth()">Load Synths (User input required)
-  </button>
-  <div style = "width:400px;" id = "dataset"></div>
-  <div id = "synths"></div>
+  <script src = "./libs/maxiInstruments.v.0.7.2.js">
+  </script>
 </head>
 <body>
+  <button onclick="run()">click me</button>
+  <div id = "synths"></div>
+  <script type = "text/javascript">
+    const run = ()=>{
+    var synth;
+    var muted = true;
+    const instruments = new MaxiInstruments("http://localhost:4200/libs");
+    instruments.guiElement = document.getElementById("synths");
+    instruments.loadModules().then(()=> {
 
-  <script id = "synthCode">
-    class MinimalSynth extends MaxiSynthProcessorBase {
+      sampler = instruments.addSampler();
+      sampler.loadSample("./sounds/909.wav", 0);
+      sampler.loadSample("./sounds/909b.wav", 1);
+      sampler.loadSample("./sounds/909closed.wav", 2);
+      sampler.mapped = ["rate_0"];
+      sampler.setParam("rate_0", 1)
+      sampler.mute();
+      //Make your own drum sequence, pitch refers to sample index
+      //24 Steps per beat
+      let drums = [
+        {p:1, s:0, v:127},
+        {p:1, s:36, v:127},
+        {p:0, s:24, v:127},
+        {p:2, s:0, v:20},
+        {p:2, s:12, v:127},
+        {p:2, s:24, v:20},
+        {p:2, s:36, v:127}
+      ]
 
-      //Called once at begining (declare custom variables)
-      setup() {
-        this.numSamples = 8;
-        this.samples = [];
-        this.triggeredThisLoop = new Array(this.numSamples).fill(false);
-        for(let i = 0; i < this.numSamples; i++)
-        {
-          this.samples.push(new Maximilian.maxiSample());
-        }
-      }
+      //Set the sequences to the instruments
+      instruments.setTempo(80);
+      sampler.setSequence(drums);
+      sampler.setLoop(48);
 
-      noteSignal(envVol, index, freq, vel) {
-        let signal = 0;
-        if(!this.triggeredThisLoop[freq]) {
-          this.triggeredThisLoop[freq] = true
-          const rate = this.parameters.rate.val;
-          const waveLength = this.sampleRate/this.samples[freq].getLength()
-          const trig = this.oscillators[index].impulse(waveLength * rate)
-          signal = this.samples[freq].playOnZXAtSpeed(trig, rate) * envVol * this.numSamples;
-        }
-        return signal;
-      }
-
-      //Called once at end of process loop (every sample)
-      endSignal(signal) {
-        this.triggeredThisLoop = new Array(this.numSamples).fill(false);
-        return [signal, signal];
-      }
-    }
-    </script>
-  <script type="text/javascript">
-
-    //OUPUT
-    var origin = "https://mimicproject.com/libs";
-    origin = "http://127.0.0.1:4200/libs"
-    const instruments = new MaxiInstruments(origin);
-    var synth, sampler;
-    const launchSynth = ()=> {
-      instruments.guiElement = document.getElementById("synths");
-      instruments.loadModules().then(()=> {
-        const parameters = {
-          rate:{min:0,max:2,val:1}
-        }
-        //Pass custom code and parameters
-        synth = instruments.addSynth("synthCode", parameters);
-
-        let origin = document.location.origin
-        if(origin.includes("file"))
-        {
-          origin = "http://localhost:4200"
-        }
-        // load from a specific origin, from a specific folder, into a specific slot.
-        synth.loadSample(origin + "/sounds/909b.wav", 0);
-        synth.loadSample(origin + "/sounds/909.wav", 1);
-        const samplerSeq = [
-           {f:0, s:0, l:16},
-           {f:1, s:24, l:16},
-         ]
-        synth.setSequence(samplerSeq, 4);
-        synth.setLoop(64, 4);
-        // instruments.setOnTick((playHeads)=>{
-        //   console.log(playHeads[0])
-        // })
-      });
-    }
+    }).catch((err)=> {
+      console.log("error", err);
+    });
+  }
 </script>
 </body>
 </html>

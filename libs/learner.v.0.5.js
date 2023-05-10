@@ -268,10 +268,9 @@ class Learner {
   }
 
   setupRegressionModel(dataset) {
-    const numInputs = dataset[0].input.length
-    const numOutputs = dataset[0].output.length
-
     const makeModel = ()=> {
+      const numInputs = dataset[0].input.length
+      const numOutputs = dataset[0].output.length
       let numHiddenLayers = 1;
       if(this.modelOptions.numHiddenLayers !== undefined) {
         numHiddenLayers = this.modelOptions.numHiddenLayers;
@@ -281,17 +280,18 @@ class Learner {
         numHiddenNodes = this.modelOptions.numHiddenNodes;
       }
       this.myModel = tf.sequential()
-      this.myModel.add(tf.layers.dense({inputShape: [numInputs], units: 1}))
+      this.myModel.add(tf.layers.dense({inputShape: [numInputs], units: numInputs}))
       for(let i = 0; i < numHiddenLayers; i++) {
         this.myModel.add(tf.layers.dense({units: numHiddenNodes, activation: 'sigmoid'}))
       }
+      console.log("numOutputs",numOutputs,dataset[0])
       this.myModel.add(tf.layers.dense({units: numOutputs, activation: 'linear'}))
       this.myModel.compile({
         optimizer: 'adam',
         loss: 'meanSquaredError',
         metrics: ['mse']
       });
-
+      this.myModel.summary();
     }
     return new Promise((resolve, reject)=> {
       if(typeof tf === "undefined") {
@@ -598,7 +598,9 @@ class Learner {
   @param {number} options.numHiddenLayers - number of hidden layers in regression model
    */
   setModelOptions(options) {
-    this.modelOptions = options;
+    Object.keys(options).forEach((k)=> {
+      this.modelOptions[k] = options[k];
+    })
     if(this.modelType == 1)
     {
       //nothing yet
@@ -663,18 +665,19 @@ class Learner {
         {
 
           let epochs = this.modelOptions.numEpochs;
+          console.log("training for", this.modelOptions)
           const dataset = t;
           this.setupRegressionModel(dataset).then(()=> {
             let x = this.normalise(tf.tensor(dataset.map(i=>i.input)))
             const y = tf.tensor(dataset.map(o=>o.output))
             let onEpochEnd = (epoch, logs)=> {
-              console.log(epoch, logs.mse)
+              console.log("epoch:",epoch, "mse:",logs.mse)
             }
             this.myModel.fit(x, y, {
               epochs:epochs,
               callbacks:{onEpochEnd}
             }).then((info)=> {
-              console.log("trainingend",info.history)
+              console.log("training end",info.history)
               this.trainingEnd();
             })
           });
@@ -1034,7 +1037,8 @@ class Learner {
            this.resetFeatures();
            dataset.forEach((line)=> {
              const input = this.getFeatures(line.input)
-             let l = {input:input, output:line.output};
+             let output = line.output.map(o=>parseFloat(o))
+             let l = {input:input, output:output};
              trainingData.push(l);
            });
            this.resetFeatures();

@@ -214,6 +214,7 @@ class ArrayReader {
 class MaxiInstruments {
 
   constructor(origin) {
+
     /** Holds the sampler objects, in order of added
         @var {MaxiSampler[]} */
     this.samplers = [];
@@ -223,12 +224,10 @@ class MaxiInstruments {
     this.globalParameters = new Float32Array(512);
     this.numParams = 0;
     this.loops = new Float32Array(16);
-
     this.sendTick = false;
     this.synthProcessorName = 'maxi-synth-processor';
     this.version = "v.0.7.2";
     this.TICKS_PER_BEAT = 24;
-
     var head = document.getElementsByTagName('HEAD')[0];
     let nexusUI = document.createElement('script');
     nexusUI.type = 'text/javascript';
@@ -289,14 +288,17 @@ class MaxiInstruments {
   @returns {Object} the MaxiSampler object
    */
   addSampler() {
+    console.log("addSampler")
     let sampler;
     let params = MaxiSampler.parameters();
     if (this.audioContext !== undefined) {
+      console.log("sending message adding sampler")
       this.node.port.postMessage({
           addSampler:true,
           params:Object.keys(params),
           offset:this.numParams
         });
+
       sampler = new MaxiSampler(
         this.node,
         this.samplers.length,

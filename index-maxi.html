@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>window.onerror = function(error, url, line) {parent.postMessage(["console", "❌ -- [ERROR] -- ❌ -- ⚠️ " + error], "*")};var cl = console.log;console.log = function () {var msg = [...arguments].join();parent.postMessage(["console", msg], "*");  }  </script><script src = "https://mimicproject.com/libs/nexusUI.js">
+</script>
+ <script crossorigin src = "https://mimicproject.com/libs/maximilian.v.0.1.js">
+</script>
+<link href="https://fonts.googleapis.com/css?family=Staatliches" rel="stylesheet"/>
+ <link rel="stylesheet" href="https://mimicproject.com/libs/maximilian-example.css" />
+   <div>
+    <div id="title">Maximilian.js User Input Seed</div>
+    <div id="subtitle">Use the mouse to control the frequency </div>
+  <div><button id="playButton">Play</button></div>
+</div>
+<div id="oscilloscope"></div>
+<div id="spectrogram"></div>
+</head>
+<body>
+
+  <script id = "myAudioScript">
+    //Maximilian code goes here
+    var input = new Input('fromMain');
+    var osc1 = new Maximilian.maxiOsc();
+    var osc2= new Maximilian.maxiOsc();
+    function play() {
+      //Get data from main thread
+      var mousex = input.getValue();
+      return (osc1.saw(mousex) + osc2.saw(mousex+0.5)) * 0.5;
+    }
+
+</script>
+
+  <script language="javascript">
+	  let maxi;
+    initAudioEngine().then((dspEngine)=>{
+      maxi = dspEngine;
+      setup();
+      //Get audio code from script element
+      maxi.setAudioCode("myAudioScript");
+    })
+
+    var onMouseMove = (e) => {
+      const x = e.pageX/window.innerWidth;
+      //Send data to audio worklet
+      maxi.send("fromMain", [x*2000]);
+    }
+    document.addEventListener( 'mousemove', onMouseMove, true )
+
+    ///////YOU CAN IGNORE ME - CODE FOR SCOPES///////
+    let setup = ()=> {
+      maxi.hush()
+      Nexus.context = maxi.audioWorkletNode.context;
+      new Nexus.Oscilloscope('oscilloscope', {'size': [400,100]}).connect(maxi.audioWorkletNode);
+      new Nexus.Spectrogram('spectrogram', {'size': [400,100]}).connect(maxi.audioWorkletNode);
+      const playButton = document.getElementById('playButton');
+      let playAudio = () => {
+        playButton.innerHTML  = maxi.play() ? "STOP":"PLAY"
+      }
+      playButton.addEventListener("click", () => playAudio());
+    }
+    ///////////////////////////////////////////////
+
+
+</script>
+</body>
+</html>
