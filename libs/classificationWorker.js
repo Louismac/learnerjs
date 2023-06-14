@@ -1,4 +1,4 @@
-let url = "https://mimicproject.com/libs/rapidLib.js"
+let url = "../libs/rapidLib.js"
 try {
   importScripts(url);
 } catch (err) {

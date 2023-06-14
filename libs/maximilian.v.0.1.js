@@ -1,12 +1,9 @@
 
-const origin = "https://mimicproject.com/libs";
-//const origin = "http://localhost:4200/libs";
-
-var initAudioEngine = ()=>{
+var initAudioEngine = (origin = document.location.origin+"/libs")=>{
   return new Promise((resolve, reject)=>{
     //Dynamically load modules
-    import("./index.mjs").then((semaEngine)=>{
-      import("./ringbuf.js").then((RingBuffer)=>{
+    import(origin + "/index.mjs").then((semaEngine)=>{
+      import(origin + "/ringbuf.js").then((RingBuffer)=>{
         //Setup sema engine
         const Engine = semaEngine.Engine
         const Learner = semaEngine.Learner
@@ -90,6 +87,7 @@ var initAudioEngine = ()=>{
           }
 
           maxi.setAudioCode = async (location, newSetup = true)=>{
+            console.log("setAudioCode")
             const executeCode = (userCode)=> {
               userCode = userCode.replace(/Maximilian/g, "Module");
               dspCode = {}
@@ -141,20 +139,34 @@ var initAudioEngine = ()=>{
             }
             //Try script element
             let scriptElement = document.getElementById(location)
-            if(scriptElement)
+            console.log("location",location, scriptElement)
+            if(scriptElement !== null)
             {
               executeCode(scriptElement.innerHTML)
             }
             else
             {
               //Else try url
-              let response = await fetch(location);
-              if (response.ok) {
-                let text = await response.text();
-                executeCode(text)
-              } else {
+              console.log("try url")
+              function isValidURL(url) {
+                try {
+                  new URL(url);
+                  return true;
+                } catch (error) {
+                  return false;
+                }
+              }
+              if(isValidURL(location)) {
+                let response = await fetch(location);
+                if (response.ok) {
+                  let text = await response.text();
+                  console.log("executing http code")
+                  executeCode(text)
+                }
+              }
+              else {
                 //Else use string literal
-                console.log("HTTP-Error: " + response.status);
+                console.log("executing literal code")
                 executeCode(location)
               }
             }

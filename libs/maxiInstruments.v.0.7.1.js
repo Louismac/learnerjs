@@ -244,20 +244,20 @@ class MaxiInstruments {
     {
       this.origin = "http://127.0.0.1:4200/libs"
     }
-    nexusUI.src = 'https://mimicproject.com/libs/nexusUI.js';
+    nexusUI.src = this.origin + '/nexusUI.js';
     head.appendChild(nexusUI);
 
     var link = document.createElement('link');
     link.rel = 'stylesheet';
     link.type = 'text/css';
-    link.href = 'https://mimicproject.com/libs/maxiInstruments.css';
+    link.href = this.origin + '/maxiInstruments.css';
     head.appendChild(link);
 
 
     var meta = document.createElement('meta');
     meta.httpEquiv = "origin-trial";
     meta.content = "AiYSmSRmU1z6CKo9EFpC7stfywHSVXN1bHH6VpKgzyAwlwgJMD8by7P0lsGEXK+qUt0s9bM28VeeKPTkdVxMywsAAAB7eyJvcmlnaW4iOiJodHRwczovL3NhbmRib3guY2FibGVzLmdsOjQ0MyIsImZlYXR1cmUiOiJVbnJlc3RyaWN0ZWRTaGFyZWRBcnJheUJ1ZmZlciIsImV4cGlyeSI6MTY1ODg3OTk5OSwiaXNTdWJkb21haW4iOnRydWV9";
-    head.appendChild(meta);
+    //head.appendChild(meta);
   }
 
   getSynthName() {
@@ -601,23 +601,22 @@ Load the modules. Must be done before any synths or samplers are added
       if (this.audioContext === undefined) {
         try {
            /** Holds the main AudioContext
-        @var {Object} */
+          @var {Object} */
           this.audioContext = new AudioContext({
             latencyHint:'playback',
             sample: 44100
           });
-         this.loadModule(this.getSynthName()).then(()=> {
+          this.loadModule(this.getSynthName()).then(()=> {
             this.createNode().then(resolve);
-          }).catch((err)=> {
-            if(this.guiElement !== undefined)
+          })
+        } catch (err) {
+          if(this.guiElement !== undefined)
             {
               const label = document.createElement("p");
               label.innerHTML = "Audio worklets not supported, try Chrome!";
               this.guiElement.appendChild(label)
             }
             reject(err);
-          });
-        } catch (err) {
           console.log("error loading modules", err)
           reject(err);
         }
@@ -829,7 +828,6 @@ class MaxiInstrument {
     {
       this.docId = window.frameElement.name
     }
-    this.keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
   }
   /**
     Set the Loop of this instrument
@@ -1323,7 +1321,6 @@ Randomise all mapped parameters
 
   sendAudioArray(sampleWorkletObjectName, float32Array) {
     if (float32Array !== undefined && this.node !== undefined) {
-      console.log("loading sample client",this.instrument, this.index)
       this.node.port.postMessage({
         audio:{
           instrument:this.instrument,
@@ -1908,6 +1905,7 @@ class MaxiSampler extends MaxiInstrument {
     super(node, index, instrument, audioContext, onParamUpdate, params, offset);
     this.voices = 8;
     this.parameters = params
+    this.keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
   }
 
   getFreq(n)

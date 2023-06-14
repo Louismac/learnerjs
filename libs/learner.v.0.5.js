@@ -196,6 +196,23 @@ class Learner {
     this.trainBtn.innerHTML = "Train";
     cell.appendChild(this.trainBtn);
 
+    cell = row.insertCell();
+    cell.colSpan = 1;
+    this.epochsLabel = document.createElement("p");
+    this.epochsLabel.classList.add("learner-label")
+    this.epochsLabel.innerHTML = "";
+    cell.appendChild(this.epochsLabel);
+
+    cell = row.insertCell();
+    cell.colSpan = 1;
+    this.cancelTrainBtn = document.createElement("BUTTON");
+    this.cancelTrainBtn.onclick = ()=>{
+      this.cancelTrain();
+    };
+    this.cancelTrainBtn.innerHTML = "X";
+    this.cancelTrainBtn.style.visibility = "hidden"
+    cell.appendChild(this.cancelTrainBtn);
+
     row = table.insertRow();
     cell = row.insertCell();
     cell.colSpan = 2;
@@ -652,6 +669,20 @@ class Learner {
   }
 
   /**
+  Cancel current training
+   */
+  cancelTrain() {
+    if(!this.running && ! this.recording)
+    {
+      //tfjs for regression
+      if(this.modelType == 1 && this.myModel !== undefined)
+      {
+        this.myModel.stopTraining = true;
+      }
+    }
+  }
+
+  /**
   Train the current model
    */
   train() {
@@ -663,15 +694,17 @@ class Learner {
         //tfjs for regression
         if(this.modelType == 1)
         {
-
+          this.cancelTrainBtn.style.visibility = "visible";
           let epochs = this.modelOptions.numEpochs;
           console.log("training for", this.modelOptions)
           const dataset = t;
           this.setupRegressionModel(dataset).then(()=> {
+            this.myModel.stopTraining = false;
             let x = this.normalise(tf.tensor(dataset.map(i=>i.input)))
             const y = tf.tensor(dataset.map(o=>o.output))
             let onEpochEnd = (epoch, logs)=> {
               console.log("epoch:",epoch, "mse:",logs.mse)
+              this.epochsLabel.innerHTML = (epoch+1) + "/" +epochs + " - " + logs.mse.toFixed(6)
             }
             this.myModel.fit(x, y, {
               epochs:epochs,
@@ -679,6 +712,7 @@ class Learner {
             }).then((info)=> {
               console.log("training end",info.history)
               this.trainingEnd();
+              this.cancelTrainBtn.style.visibility = "hidden";
             })
           });
         }

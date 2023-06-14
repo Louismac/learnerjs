@@ -8,38 +8,41 @@
   <div id = "synths"></div>
   <script type = "text/javascript">
     const run = ()=>{
-    var synth;
+var synth;
     var muted = true;
-    const instruments = new MaxiInstruments("http://localhost:4200/libs");
+    const instruments = new MaxiInstruments();
     instruments.guiElement = document.getElementById("synths");
     instruments.loadModules().then(()=> {
+      
+      synth = instruments.addSynth();
+      synth.setOsc(2);
+      synth.mute();
+      var em7 = [64, 67, 71, 74]
+      var g7 = [62, 65, 67, 71]
+      var cmaj9 = [60, 64, 67, 71]
+      var fsharpm = [61, 64, 66, 69]
+      var b7 = [59, 63, 66, 71]
+      var synthSeq = [
+        //start, length, pitches
+        {s:0, l:4, p:em7},
+        {s:8, l:4, p:g7},
+        {s:16, l:4, p:cmaj9},
+        {s:24, l:2, p:fsharpm},
+        {s:28, l:2, p:b7},
+      ];
 
-      sampler = instruments.addSampler();
-      sampler.loadSample("./sounds/909.wav", 0);
-      sampler.loadSample("./sounds/909b.wav", 1);
-      sampler.loadSample("./sounds/909closed.wav", 2);
-      sampler.mapped = ["rate_0"];
-      sampler.setParam("rate_0", 1)
-      sampler.mute();
-      //Make your own drum sequence, pitch refers to sample index
-      //24 Steps per beat
-      let drums = [
-        {p:1, s:0, v:127},
-        {p:1, s:36, v:127},
-        {p:0, s:24, v:127},
-        {p:2, s:0, v:20},
-        {p:2, s:12, v:127},
-        {p:2, s:24, v:20},
-        {p:2, s:36, v:127}
-      ]
-
-      //Set the sequences to the instruments
       instruments.setTempo(80);
-      sampler.setSequence(drums);
-      sampler.setLoop(48);
-
+      //Sequence and loop set at 4 ticks per beat (1/16ths)
+      synth.setSequence(synthSeq, 4);
+      instruments.setLoop(32, 4);
+      
     }).catch((err)=> {
       console.log("error", err);
+    });
+    var playButton = document.getElementById("muteButton0");
+    playButton.addEventListener("click", () => {
+      var out = muted ? synth.unmute() : synth.mute();
+      muted = !muted;
     });
   }
 </script>
